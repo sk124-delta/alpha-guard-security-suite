@@ -1,6 +1,7 @@
 import os
 import uuid
 import json
+import re
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from ipaddress import ip_address
@@ -87,11 +88,20 @@ class _PageInspector(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.text_parts: list[str] = []
+        self.title_parts: list[str] = []
+        self.meta_description = ""
+        self._inside_title = False
         self.image_count = 0
         self.is_shopify = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = dict(attrs)
+        if tag.lower() == "title":
+            self._inside_title = True
+        if tag.lower() == "meta":
+            meta_name = (attributes.get("name") or attributes.get("property") or "").lower()
+            if meta_name in {"description", "og:description"} and attributes.get("content"):
+                self.meta_description = attributes["content"] or ""
         if tag.lower() == "img":
             self.image_count += 1
         if tag.lower() == "script":
@@ -102,14 +112,37 @@ class _PageInspector(HTMLParser):
             if value and ("cdn.shopify.com" in value.lower() or "shopify" in value.lower()):
                 self.is_shopify = True
 
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() == "title":
+            self._inside_title = False
+
     def handle_data(self, data: str) -> None:
         self.text_parts.append(data)
+        if self._inside_title:
+            self.title_parts.append(data)
         if "cdn.shopify.com" in data.lower() or "/products.json" in data.lower():
             self.is_shopify = True
 
 
 MAX_DOMAIN_PAGE_BYTES = 2 * 1024 * 1024
 DOMAIN_REQUEST_TIMEOUT = (3, 7)
+INDUSTRY_KEYWORDS = {
+    "E-commerce & Apparel": [
+        "clothing", "apparel", "fashion", "wear", "dress", "shirts", "shoes",
+        "cart", "checkout", "store", "collection", "stitching", "unstitched", "fabric",
+    ],
+    "Education & Academics": [
+        "university", "school", "course", "curriculum", "tuition", "degree",
+        "student", "faculty", "academy", "admissions", "scholarship",
+    ],
+    "Software & SaaS": [
+        "software", "api", "dashboard", "pricing", "integration", "developer",
+        "documentation", "saas", "platform",
+    ],
+    "Digital Goods & Media": [
+        "ebook", "preset", "template", "vector", "download", "font", "graphics",
+    ],
+}
 
 
 def _normalize_inspection_url(value: str) -> str:
@@ -286,6 +319,48 @@ def inspect_domain(data: DomainInspectionSchema):
         "recommended_tier": tier_name,
         "price": price,
         "plan_id": recommended_plan_id,
+    }
+
+
+@app.post("/api/v1/detect-category")
+def detect_website_category(data: DomainInspectionSchema):
+    try:
+        target_url = _normalize_inspection_url(data.url)
+        page_bytes, content_type = _fetch_public_page(target_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to retrieve the public domain for category detection.",
+        ) from exc
+
+    if "text/html" not in content_type and "application/xhtml+xml" not in content_type:
+        raise HTTPException(status_code=422, detail="The inspected URL did not return an HTML page.")
+
+    parser = _PageInspector()
+    parser.feed(page_bytes.decode("utf-8", errors="replace"))
+    title = " ".join(" ".join(parser.title_parts).split())
+    meta_description = parser.meta_description.strip()
+    searchable_text = f"{title} {meta_description}".lower()
+
+    scores = {
+        category: sum(
+            bool(re.search(r"\b" + re.escape(keyword) + r"\b", searchable_text))
+            for keyword in keywords
+        )
+        for category, keywords in INDUSTRY_KEYWORDS.items()
+    }
+    detected_category = max(scores, key=scores.get)
+    confidence_score = scores[detected_category]
+    if confidence_score == 0:
+        detected_category = "General Business / Unclassified"
+
+    return {
+        "status": "success",
+        "detected_category": detected_category,
+        "confidence_score": confidence_score,
+        "title": title or target_url,
     }
 
 
