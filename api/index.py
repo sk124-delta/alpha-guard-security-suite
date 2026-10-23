@@ -53,9 +53,12 @@ async def catch_all(request: Request, path: str = ""):
         except Exception as e:
             print(f"Resend dispatch error: {e}")
 
+    # Return fields matching what frontend auth parsers look for
     return JSONResponse(content={
         "status": "success",
-        "message": f"Action '{action}' processed successfully",
-        "email_dispatched": email_sent,
-        "access_token": "demo_token_123"
+        "success": True,
+        "token": "demo_token_xyz_12345",
+        "access_token": "demo_token_xyz_12345",
+        "message": f"Action '{action}' completed successfully",
+        "email_dispatched": email_sent
     })
