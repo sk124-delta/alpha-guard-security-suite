@@ -451,6 +451,7 @@ def execute_automated_scan(data: ScanRequestSchema, db: Session = Depends(get_db
                 host_abuse_email=data.host_abuse_email,
                 target_infringing_url=str(data.target_infringing_url),
                 original_asset_url=str(data.original_image_url),
+                store_domain=store.store_url,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

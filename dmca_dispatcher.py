@@ -23,7 +23,9 @@ class DmcaProviderRejectedError(DmcaDeliveryError):
 
 def get_resend_settings() -> tuple[str, str]:
     api_key = os.getenv("RESEND_API_KEY", "").strip()
-    sender_email = os.getenv("RESEND_FROM_EMAIL", "").strip()
+    sender_email = (
+        os.getenv("SENDER_LEGAL_EMAIL") or os.getenv("RESEND_FROM_EMAIL", "")
+    ).strip()
     if not api_key or not sender_email:
         raise RuntimeError("Email dispatch is not configured.")
     return api_key, _validate_email_address(sender_email)
@@ -41,8 +43,9 @@ def send_dmca_notice(
         response = requests.post(
             RESEND_API_URL,
             json={
-                "from": sender_email,
+                "from": f"AlphaGuard Legal <{sender_email}>",
                 "to": [recipient],
+                "reply_to": sender_email,
                 "subject": subject,
                 "html": html,
             },
@@ -120,35 +123,42 @@ def create_dmca_notice_draft(
     target_infringing_url: str,
     original_asset_url: str,
     sender_email: str | None = None,
+    store_domain: str | None = None,
 ) -> dict[str, str]:
     recipient = _validate_email_address(host_abuse_email)
     sender = _validate_email_address(
-        sender_email or os.getenv("RESEND_FROM_EMAIL", "legal@alphaguardsecurity.suite")
+        sender_email
+        or os.getenv("SENDER_LEGAL_EMAIL")
+        or os.getenv("RESEND_FROM_EMAIL", "legal@alphaguardsuite.com")
     )
     infringing_url = _validate_http_url(target_infringing_url, "Infringing URL")
     asset_url = _validate_http_url(original_asset_url, "Original asset URL")
 
     safe_infringing_url = escape(infringing_url, quote=True)
     safe_asset_url = escape(asset_url, quote=True)
+    safe_store_domain = escape(store_domain or urlsplit(infringing_url).hostname or "", quote=True)
 
     draft = DmcaNoticeDraft(
         recipient=recipient,
         sender=sender,
         subject=(
-            "Notice of Copyright Infringement and Takedown Request - "
-            f"{infringing_url}"
+            "LEGAL NOTICE: Formal DMCA Copyright Infringement Notice - "
+            f"{store_domain or urlsplit(infringing_url).hostname}"
         ),
         html=(
-            "<h3>DMCA TAKEDOWN NOTICE</h3>"
-            "<p>To Hosting Provider Abuse Desk,</p>"
-            "<p>Please review this report of suspected unauthorized duplication "
-            "of protected media assets hosted on your network:</p>"
+            "<h2>DMCA TAKEDOWN NOTICE</h2>"
+            "<p><strong>To the Abuse and Legal Department:</strong></p>"
+            "<p>Please review this report of suspected unauthorized use of "
+            f"protected media hosted at <strong>{safe_store_domain}</strong>:</p>"
             "<ul>"
             f"<li><strong>Infringing URL:</strong> {safe_infringing_url}</li>"
             f"<li><strong>Original Asset Reference:</strong> {safe_asset_url}</li>"
             "</ul>"
-            "<p>Please review the materials and take any appropriate action "
-            "under your applicable policies and legal obligations.</p>"
+            "<p>The reported imagery was identified by the AlphaGuard image "
+            "similarity scanner. Please review the materials and take any "
+            "appropriate action under your applicable policies and legal obligations.</p>"
+            "<p>Please direct any response to the AlphaGuard Legal Enforcement Team "
+            f"at {escape(sender, quote=True)}.</p>"
         ),
     )
     return asdict(draft)
