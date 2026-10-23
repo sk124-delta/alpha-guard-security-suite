@@ -162,9 +162,10 @@
                     <i data-lucide="moon" id="themeIconMoon" class="w-4 h-4"></i>
                 </button>
 
-                <button type="button" onclick="toggleAuthModal(true)" class="px-4 py-2 rounded-lg border border-cyber-cyan/30 text-cyber-cyan hover:bg-cyber-cyan/10 font-medium text-sm transition-all light:text-cyber-cyandark">
+                <button type="button" id="nav-auth-btn" onclick="toggleAuthModal(true)" class="px-4 py-2 rounded-lg border border-cyber-cyan/30 text-cyber-cyan hover:bg-cyber-cyan/10 font-medium text-sm transition-all light:text-cyber-cyandark">
                     Sign In
                 </button>
+                <div id="nav-user-profile" class="hidden items-center space-x-2"></div>
 
                 <button type="button" onclick="toggleAuthModal(true, 'signup')" class="px-4 py-2 rounded-lg bg-cyber-cyan hover:bg-cyber-cyandark text-cyber-black font-semibold text-xs sm:text-sm transition-all glow-cyan">
                     Start 7-Day Free Trial
@@ -1437,6 +1438,7 @@
                 payload.password = document.getElementById('login-password').value;
             } else if (type === 'signup') {
                 payload.name = document.getElementById('signup-name').value;
+                payload.store_url = document.getElementById('signup-url').value;
                 payload.email = document.getElementById('signup-email').value;
                 payload.password = document.getElementById('signup-password').value;
             } else if (type === 'forgot') {
@@ -1444,20 +1446,73 @@
             }
 
             try {
-                const res = await fetch('/api/index', {
+                const endpoint = type === 'signup' ? '/api/v1/auth/register' : '/api/index';
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json().catch(() => ({}));
-                alert(data.message || 'Authentication successful! Check your inbox for confirmation.');
-                localStorage.setItem('ag_token', data.token || data.access_token || 'demo_token_123');
+                if (!res.ok) {
+                    throw new Error(data.detail || data.message || 'An error occurred. Please try again.');
+                }
+                if (type === 'forgot') {
+                    alert('Password reset link sent! Please check your inbox.');
+                    toggleAuthModal(false);
+                    return;
+                }
+                const token = data.token || data.access_token;
+                if (token) {
+                    const user = data.user || {};
+                    localStorage.setItem('ag_token', token);
+                    localStorage.setItem('ag_user', JSON.stringify({
+                        email: user.email || payload.email,
+                        store_name: user.store_name || user.name || payload.name || ''
+                    }));
+                }
                 toggleAuthModal(false);
+                checkAuthState();
             } catch (err) {
-                alert('Authentication processed successfully.');
-                toggleAuthModal(false);
+                alert(err.message || 'Authentication failed. Please try again.');
             }
         }
+
+        function checkAuthState() {
+            let user = null;
+            try { user = JSON.parse(localStorage.getItem('ag_user') || 'null'); } catch (e) { /* corrupted entry */ }
+            const authBtn = document.getElementById('nav-auth-btn');
+            const profileNav = document.getElementById('nav-user-profile');
+            if (!user || !user.email) {
+                if (authBtn) authBtn.classList.remove('hidden');
+                if (profileNav) profileNav.classList.add('hidden');
+                if (profileNav) profileNav.classList.remove('flex');
+                return;
+            }
+            if (authBtn) authBtn.classList.add('hidden');
+            if (profileNav) {
+                profileNav.innerHTML = '';
+                const badge = document.createElement('span');
+                badge.className = 'px-3 py-1.5 rounded-lg border border-cyber-cyan/30 bg-cyber-cyan/10 text-cyber-cyan text-xs font-semibold max-w-[160px] truncate';
+                badge.textContent = user.store_name || user.email;
+                badge.title = user.email;
+                const out = document.createElement('button');
+                out.type = 'button';
+                out.className = 'px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all';
+                out.textContent = 'Sign Out';
+                out.addEventListener('click', handleLogout);
+                profileNav.append(badge, out);
+                profileNav.classList.remove('hidden');
+                profileNav.classList.add('flex');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('ag_token');
+            localStorage.removeItem('ag_user');
+            window.location.reload();
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAuthState);
 
         function toggleTheme() {
             const html = document.documentElement;
@@ -1523,6 +1578,10 @@
                 <input type="text" id="signup-name" autocomplete="name" maxlength="120" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="Acme Store">
             </div>
             <div>
+                <label for="signup-url" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Store Website URL</label>
+                <input type="text" id="signup-url" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="https://acmestore.com">
+            </div>
+            <div>
                 <label for="signup-email" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Work Email</label>
                 <input type="email" id="signup-email" autocomplete="email" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="owner@acmestore.com">
             </div>
@@ -1550,187 +1609,3 @@
 </div>
 </body>
 </html>
-// Check authentication state on page load
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuthState();
-});
-
-function checkAuthState() {
-    const user = JSON.parse(localStorage.getItem('ag_user') || 'null');
-    const authBtn = document.getElementById('nav-auth-btn'); // Adjust ID to match your header sign-in button
-    const userProfileNav = document.getElementById('nav-user-profile'); // Header container for logged-in user
-
-    if (user && user.email) {
-        if (authBtn) authBtn.classList.add('hidden');
-        if (userProfileNav) {
-            userProfileNav.classList.remove('hidden');
-            userProfileNav.innerHTML = `
-                <div class="flex items-center space-x-3">
-                    <span class="text-sm font-semibold text-cyan-400">${user.store_name || user.email}</span>
-                    <button onclick="handleLogout()" class="text-xs text-slate-400 hover:text-white border border-slate-700 px-3 py-1 rounded-lg">Sign Out</button>
-                </div>
-            `;
-        }
-    }
-}
-
-function handleLogout() {
-    localStorage.removeItem('ag_token');
-    localStorage.removeItem('ag_user');
-    window.location.reload();
-}
-
-async function handleAuthSubmit(event, mode) {
-    event.preventDefault();
-    const statusEl = document.getElementById('auth-status');
-    statusEl.classList.remove('hidden', 'text-red-400', 'text-emerald-400');
-    statusEl.textContent = 'Processing request...';
-
-    try {
-        let endpoint = '';
-        let payload = {};
-
-        if (mode === 'login') {
-            endpoint = '/api/v1/auth/login';
-            payload = {
-                email: document.getElementById('login-email').value,
-                password: document.getElementById('login-password').value
-            };
-        } else if (mode === 'signup') {
-            endpoint = '/api/v1/auth/register';
-            payload = {
-                store_name: document.getElementById('signup-name').value,
-                email: document.getElementById('signup-email').value,
-                password: document.getElementById('signup-password').value
-            };
-        } else if (mode === 'forgot') {
-            endpoint = '/api/v1/auth/forgot-password';
-            payload = {
-                email: document.getElementById('forgot-email').value
-            };
-        }
-
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.detail || 'An error occurred. Please try again.');
-        }
-
-        if (mode === 'forgot') {
-            statusEl.classList.add('text-emerald-400');
-            statusEl.textContent = 'Password reset link sent! Check your inbox.';
-            return;
-        }
-
-        // Save session data for login and signup
-        if (data.token || data.access_token) {
-            localStorage.setItem('ag_token', data.token || data.access_token);
-            localStorage.setItem('ag_user', JSON.stringify(data.user || { email: payload.email, store_name: payload.store_name }));
-        }
-
-        statusEl.classList.add('text-emerald-400');
-        statusEl.textContent = 'Success! Redirecting...';
-
-        setTimeout(() => {
-            toggleAuthModal(false);
-            checkAuthState();
-        }, 1000);
-
-    } catch (err) {
-        statusEl.classList.add('text-red-400');
-        statusEl.textContent = err.message;
-    }
-}
-<!-- Signup Form inside #auth-modal -->
-<form id="form-signup" onsubmit="handleAuthSubmit(event, 'signup')" class="space-y-4 hidden">
-    <div>
-        <label for="signup-name" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Store Name / Company</label>
-        <input type="text" id="signup-name" autocomplete="organization" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="Acme Store">
-    </div>
-    <div>
-        <label for="signup-url" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Store Website URL</label>
-        <input type="text" id="signup-url" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="https://acmestore.com">
-    </div>
-    <div>
-        <label for="signup-email" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Work Email</label>
-        <input type="email" id="signup-email" autocomplete="email" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="owner@acmestore.com">
-    </div>
-    <div>
-        <label for="signup-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Password (8 characters min)</label>
-        <input type="password" id="signup-password" autocomplete="new-password" minlength="8" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
-    </div>
-    <button type="submit" class="auth-submit-button w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Create Account & Start Trial</button>
-</form>
-async function handleAuthSubmit(event, mode) {
-    event.preventDefault();
-    const statusEl = document.getElementById('auth-status');
-    statusEl.classList.remove('hidden', 'text-red-400', 'text-emerald-400');
-    statusEl.textContent = 'Processing request...';
-
-    try {
-        let endpoint = '';
-        let payload = {};
-
-        if (mode === 'login') {
-            endpoint = '/api/v1/auth/login';
-            payload = {
-                email: document.getElementById('login-email').value,
-                password: document.getElementById('login-password').value
-            };
-        } else if (mode === 'signup') {
-            endpoint = '/api/v1/auth/register';
-            payload = {
-                store_name: document.getElementById('signup-name').value,
-                store_url: document.getElementById('signup-url').value,
-                email: document.getElementById('signup-email').value,
-                password: document.getElementById('signup-password').value
-            };
-        } else if (mode === 'forgot') {
-            endpoint = '/api/v1/auth/forgot-password';
-            payload = { email: document.getElementById('forgot-email').value };
-        }
-
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            // Displays error message directly (e.g., "Account already exists" or "Store domain already claimed")
-            throw new Error(data.detail || 'An error occurred. Please try again.');
-        }
-
-        if (mode === 'forgot') {
-            statusEl.classList.add('text-emerald-400');
-            statusEl.textContent = 'Password reset link sent! Please check your inbox.';
-            return;
-        }
-
-        // Save session details and update header navigation
-        if (data.token || data.user) {
-            localStorage.setItem('ag_token', data.token || 'session_active');
-            localStorage.setItem('ag_user', JSON.stringify(data.user));
-        }
-
-        statusEl.classList.add('text-emerald-400');
-        statusEl.textContent = 'Success! Redirecting...';
-
-        setTimeout(() => {
-            toggleAuthModal(false);
-            if (typeof checkAuthState === 'function') checkAuthState();
-        }, 1000);
-
-    } catch (err) {
-        statusEl.classList.add('text-red-400');
-        statusEl.textContent = err.message;
-    }
-}

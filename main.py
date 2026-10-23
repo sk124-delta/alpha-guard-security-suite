@@ -96,6 +96,7 @@ class CustomerAccountModel(Base):
     name = Column(String(120), nullable=False)
     email = Column(String(254), nullable=False, unique=True, index=True)
     password_hash = Column(String(128), nullable=False)
+    store_domain = Column(String(253), nullable=True, unique=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
@@ -413,8 +414,14 @@ def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(ge
     }
     if data.email in reserved_emails:
         raise HTTPException(status_code=409, detail="This email cannot be used for a customer account.")
+    email_error = "An account with this email address already exists."
+    domain_error = "This store URL is already registered under another account."
+    store_domain = data.store_url  # normalized by the schema validator
+
     if db.query(CustomerAccountModel).filter(CustomerAccountModel.email == data.email).first():
-        raise HTTPException(status_code=409, detail="An account with this email already exists.")
+        raise HTTPException(status_code=400, detail=email_error)
+    if store_domain and db.query(CustomerAccountModel).filter(CustomerAccountModel.store_domain == store_domain).first():
+        raise HTTPException(status_code=400, detail=domain_error)
 
     try:
         access_token = issue_customer_token(data.email)
@@ -425,13 +432,17 @@ def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(ge
         name=data.name,
         email=data.email,
         password_hash=hash_customer_password(data.password),
+        store_domain=store_domain,
     )
     db.add(customer)
     try:
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise HTTPException(status_code=409, detail="An account with this email already exists.") from exc
+        # Concurrent request won the race; report whichever constraint now conflicts.
+        if db.query(CustomerAccountModel).filter(CustomerAccountModel.email == data.email).first():
+            raise HTTPException(status_code=400, detail=email_error) from exc
+        raise HTTPException(status_code=400, detail=domain_error) from exc
 
     welcome_email_sent = False
     try:
@@ -447,6 +458,7 @@ def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(ge
         "token_type": "bearer",
         "expires_in": CUSTOMER_TOKEN_EXPIRE_MINUTES * 60,
         "role": "customer",
+        "user": {"email": data.email, "store_name": data.name, "store_domain": store_domain},
         "welcome_email_sent": welcome_email_sent,
         "email_dispatched": welcome_email_sent,
     }

@@ -20,10 +20,30 @@ RESEND_API_URL = "https://api.resend.com/emails"
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+def extract_domain(url: str) -> str:
+    """Normalize e.g. 'https://www.MyStore.com/shop/' to 'mystore.com'."""
+    url = url.strip().lower()
+    if "://" not in url:
+        url = "https://" + url
+    host = urlsplit(url).hostname or ""
+    return host[4:] if host.startswith("www.") else host
+
+
 class CustomerRegistrationSchema(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=8, max_length=128)
+    store_url: str | None = Field(default=None, max_length=2048)
+
+    @field_validator("store_url")
+    @classmethod
+    def validate_store_url(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        domain = extract_domain(value)
+        if "." not in domain:
+            raise ValueError("Enter a valid store URL.")
+        return domain
 
     @field_validator("name")
     @classmethod
