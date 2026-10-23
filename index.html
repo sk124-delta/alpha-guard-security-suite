@@ -149,7 +149,7 @@
                 <button onclick="switchTab('onboarding')" id="nav-onboarding" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 light:text-slate-600 light:hover:text-slate-900 transition-all">
                     <i data-lucide="sparkles" class="w-4 h-4 inline mr-1.5"></i> Free Trial & Plan Wizard
                 </button>
-                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 light:text-slate-600 light:hover:text-slate-900 transition-all">
+                <button onclick="openPortal()" id="nav-dashboard" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 light:text-slate-600 light:hover:text-slate-900 transition-all">
                     <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-1.5"></i> Client Portal & Dashboard
                 </button>
             </nav>
@@ -785,14 +785,8 @@
                         <h3 class="font-bold text-white light:text-slate-900 text-base">Admin Notice Dispatch</h3>
                         <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Sign in to review persisted high-confidence notice drafts. Each dispatch requires confirmation and is sent using the configured Resend account.</p>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
-                        <label class="text-xs text-slate-300 light:text-slate-700">Admin email
-                            <input id="admin-login-email" type="email" autocomplete="username" class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white light:bg-slate-50 light:text-slate-900" placeholder="Admin email">
-                        </label>
-                        <label class="text-xs text-slate-300 light:text-slate-700">Admin password
-                            <input id="admin-login-password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white light:bg-slate-50 light:text-slate-900" placeholder="Admin password">
-                        </label>
-                        <button id="admin-login-button" onclick="adminLogin()" class="px-4 py-2 rounded-lg bg-cyber-cyan text-cyber-black font-bold text-sm">Admin sign in</button>
+                    <div class="flex flex-wrap gap-3">
+                        <button id="admin-login-button" onclick="toggleAuthModal(true)" class="px-4 py-2 rounded-lg bg-cyber-cyan text-cyber-black font-bold text-sm">Sign in</button>
                         <button onclick="loadAdminNotices()" class="px-4 py-2 rounded-lg border border-slate-700 text-slate-200 text-sm">Refresh notices</button>
                     </div>
                     <p id="admin-notice-status" class="text-sm text-slate-300" role="status" aria-live="polite">Sign in to load pending notices.</p>
@@ -1041,6 +1035,27 @@
     </div>
 
     <!-- JAVASCRIPT APP LOGIC -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] hidden p-4" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" onclick="if (event.target === this) toggleAuthModal(false)">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md relative shadow-2xl">
+            <button type="button" onclick="toggleAuthModal(false)" class="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl leading-none" aria-label="Close sign-in dialog">&times;</button>
+            <h3 id="auth-modal-title" class="text-2xl font-bold text-white mb-2">AlphaGuard Portal</h3>
+            <p class="text-slate-400 text-sm mb-6">Sign in to access your enforcement dashboard.</p>
+
+            <form id="login-form" onsubmit="adminLogin(event)" class="space-y-4">
+                <div>
+                    <label for="login-email" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Email Address</label>
+                    <input type="email" id="login-email" autocomplete="username" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="Email address">
+                </div>
+                <div>
+                    <label for="login-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Password</label>
+                    <input type="password" id="login-password" autocomplete="current-password" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="Password">
+                </div>
+                <button id="auth-submit-button" type="submit" class="w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Sign In Securely</button>
+                <p id="auth-login-status" class="text-sm text-rose-300" role="status" aria-live="polite"></p>
+            </form>
+        </div>
+    </div>
+
     <script>
         // MASTER DATA STRUCTURE FOR INDUSTRY CATEGORIES & SUB-CATEGORIES
         const industryData = {
@@ -1249,6 +1264,31 @@
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        function toggleAuthModal(show) {
+            const modal = document.getElementById('auth-modal');
+            if (!modal) return;
+            modal.classList.toggle('hidden', !show);
+            if (show) {
+                document.getElementById('auth-login-status').textContent = '';
+                window.setTimeout(() => document.getElementById('login-email').focus(), 0);
+            }
+        }
+
+        function openPortal() {
+            if (!adminAccessToken) {
+                toggleAuthModal(true);
+                return;
+            }
+            switchTab('dashboard');
+            loadAdminNotices();
+        }
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !document.getElementById('auth-modal').classList.contains('hidden')) {
+                toggleAuthModal(false);
+            }
+        });
 
         // INDUSTRY CATEGORY SELECTION IN EXPLORER
         function selectCategory(catKey) {
@@ -1519,19 +1559,21 @@
             return body;
         }
 
-        async function adminLogin() {
+        async function adminLogin(event) {
+            event.preventDefault();
             const statusElement = document.getElementById('admin-notice-status');
-            const button = document.getElementById('admin-login-button');
-            const email = document.getElementById('admin-login-email').value.trim();
-            const passwordInput = document.getElementById('admin-login-password');
+            const authStatus = document.getElementById('auth-login-status');
+            const button = document.getElementById('auth-submit-button');
+            const email = document.getElementById('login-email').value.trim();
+            const passwordInput = document.getElementById('login-password');
 
             if (!email || !passwordInput.value) {
-                statusElement.textContent = 'Enter the admin email and password.';
+                authStatus.textContent = 'Enter your email and password.';
                 return;
             }
 
             button.disabled = true;
-            statusElement.textContent = 'Signing in…';
+            authStatus.textContent = 'Signing in…';
             try {
                 const response = await fetch(`${adminApiBaseUrl()}/api/v1/auth/token`, {
                     method: 'POST',
@@ -1541,11 +1583,14 @@
                 const body = await readApiResponse(response);
                 adminAccessToken = body.access_token;
                 passwordInput.value = '';
-                statusElement.textContent = 'Admin signed in. Loading notices…';
+                authStatus.textContent = '';
+                statusElement.textContent = 'Signed in. Loading notices…';
+                toggleAuthModal(false);
+                switchTab('dashboard');
                 await loadAdminNotices();
             } catch (error) {
                 adminAccessToken = null;
-                statusElement.textContent = `Admin sign-in failed: ${error.message}`;
+                authStatus.textContent = `Sign-in failed: ${error.message}`;
             } finally {
                 button.disabled = false;
             }
