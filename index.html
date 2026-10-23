@@ -162,10 +162,12 @@
                     <i data-lucide="moon" id="themeIconMoon" class="w-4 h-4"></i>
                 </button>
 
-                <!-- Action CTA -->
-                <button onclick="switchTab('onboarding')" class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-cyber-cyan text-cyber-black hover:bg-cyber-cyandark transition-all glow-cyan flex items-center space-x-1.5">
-                    <i data-lucide="zap" class="w-4 h-4"></i>
-                    <span>Start 7-Day Free Trial</span>
+                <button type="button" onclick="toggleAuthModal(true)" class="px-4 py-2 rounded-lg border border-cyber-cyan/30 text-cyber-cyan hover:bg-cyber-cyan/10 font-medium text-sm transition-all light:text-cyber-cyandark">
+                    Sign In
+                </button>
+
+                <button type="button" onclick="toggleAuthModal(true, 'signup')" class="px-4 py-2 rounded-lg bg-cyber-cyan hover:bg-cyber-cyandark text-cyber-black font-semibold text-xs sm:text-sm transition-all glow-cyan">
+                    Start 7-Day Free Trial
                 </button>
             </div>
         </div>
@@ -608,11 +610,12 @@
                         </ul>
                     </div>
 
-                    <button onclick="activateTrialAndGoToDashboard()" class="w-full py-3.5 rounded-xl bg-cyber-cyan text-cyber-black font-extrabold text-base hover:bg-cyber-cyandark transition-all glow-cyan flex items-center justify-center space-x-2">
+                    <button onclick="completeTrialSetup()" class="w-full py-3.5 rounded-xl bg-cyber-cyan text-cyber-black font-extrabold text-base hover:bg-cyber-cyandark transition-all glow-cyan flex items-center justify-center space-x-2">
                         <i data-lucide="zap" class="w-5 h-5"></i>
-                        <span>Start 7-Day Free Trial & Launch Dashboard</span>
+                        <span>Finish Setup</span>
                     </button>
-                    <p class="text-center text-[11px] text-slate-500">No commitment. Cancel anytime in 1-click from your Client Settings.</p>
+                    <p id="trial-setup-status" class="hidden text-center text-sm text-amber-300" role="status" aria-live="polite"></p>
+                    <p class="text-center text-[11px] text-slate-500">This recommendation does not activate a trial or create a subscription.</p>
                 </div>
 
             </div>
@@ -1036,23 +1039,72 @@
 
     <!-- JAVASCRIPT APP LOGIC -->
     <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] hidden p-4" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" onclick="if (event.target === this) toggleAuthModal(false)">
-        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md relative shadow-2xl">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto relative shadow-2xl">
             <button type="button" onclick="toggleAuthModal(false)" class="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl leading-none" aria-label="Close sign-in dialog">&times;</button>
             <h3 id="auth-modal-title" class="text-2xl font-bold text-white mb-2">AlphaGuard Portal</h3>
-            <p class="text-slate-400 text-sm mb-6">Sign in to access your automated DMCA enforcement dashboard.</p>
+            <p class="text-slate-400 text-sm mb-6">Sign in to access your account, or create an account to continue to plan setup.</p>
 
-            <form id="login-form" onsubmit="adminLogin(event)" class="space-y-4">
+            <div id="auth-tab-header" class="flex border-b border-slate-800 mb-6">
+                <button id="tab-btn-login" type="button" onclick="switchAuthView('login')" class="pb-2 mr-6 font-bold text-cyan-400 border-b-2 border-cyan-400 text-sm">Sign In</button>
+                <button id="tab-btn-signup" type="button" onclick="switchAuthView('signup')" class="pb-2 font-bold text-slate-400 hover:text-white text-sm">Create Account</button>
+            </div>
+
+            <form id="form-login" onsubmit="handleAuthSubmit(event, 'login')" class="space-y-4">
                 <div>
                     <label for="login-email" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Email Address</label>
-                    <input type="email" id="login-email" autocomplete="username" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="admin@alphaguardsuite.com">
+                    <input type="email" id="login-email" autocomplete="username" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="name@company.com">
                 </div>
                 <div>
-                    <label for="login-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Password</label>
+                    <div class="flex justify-between items-center mb-1">
+                        <label for="login-password" class="block text-xs font-semibold text-slate-300 uppercase">Password</label>
+                        <button type="button" onclick="switchAuthView('forgot')" class="text-xs text-cyber-cyan hover:underline">Forgot password?</button>
+                    </div>
                     <input type="password" id="login-password" autocomplete="current-password" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
                 </div>
-                <button id="auth-submit-button" type="submit" class="w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Sign In Securely</button>
-                <p id="auth-login-status" class="text-sm text-rose-300" role="status" aria-live="polite"></p>
+                <button type="submit" class="auth-submit-button w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Sign In Securely</button>
             </form>
+
+            <form id="form-signup" onsubmit="handleAuthSubmit(event, 'signup')" class="space-y-4 hidden">
+                <div>
+                    <label for="signup-name" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Full Name / Brand Name</label>
+                    <input type="text" id="signup-name" autocomplete="name" maxlength="120" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="Acme Store">
+                </div>
+                <div>
+                    <label for="signup-email" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Work Email</label>
+                    <input type="email" id="signup-email" autocomplete="email" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="owner@acmestore.com">
+                </div>
+                <div>
+                    <label for="signup-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Password (8 characters minimum)</label>
+                    <input type="password" id="signup-password" autocomplete="new-password" minlength="8" maxlength="128" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
+                </div>
+                <button type="submit" class="auth-submit-button w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Create Account &amp; Start Trial</button>
+            </form>
+
+            <form id="form-forgot" onsubmit="handleAuthSubmit(event, 'forgot')" class="space-y-4 hidden">
+                <h4 class="text-white font-semibold text-lg mb-1">Reset Password</h4>
+                <p class="text-slate-400 text-xs mb-4">Enter your registered email address and we’ll send a password recovery link.</p>
+                <div>
+                    <label for="forgot-email" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Email Address</label>
+                    <input type="email" id="forgot-email" autocomplete="email" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="name@company.com">
+                </div>
+                <button type="submit" class="auth-submit-button w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Send Recovery Link</button>
+                <button type="button" onclick="switchAuthView('login')" class="w-full text-xs text-slate-400 hover:text-white pt-2">Back to Sign In</button>
+            </form>
+
+            <form id="form-reset-password" onsubmit="handleAuthSubmit(event, 'reset')" class="space-y-4 hidden">
+                <h4 class="text-white font-semibold text-lg mb-1">Choose a New Password</h4>
+                <div>
+                    <label for="reset-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">New Password</label>
+                    <input type="password" id="reset-password" autocomplete="new-password" minlength="8" maxlength="128" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="At least 8 characters">
+                </div>
+                <div>
+                    <label for="reset-password-confirm" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Confirm New Password</label>
+                    <input type="password" id="reset-password-confirm" autocomplete="new-password" minlength="8" maxlength="128" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="Re-enter your password">
+                </div>
+                <button type="submit" class="auth-submit-button w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Update Password</button>
+            </form>
+
+            <p id="auth-status" class="hidden mt-4 text-sm" role="status" aria-live="polite"></p>
         </div>
     </div>
 
@@ -1227,6 +1279,8 @@
         let activeTab = 'landing';
         let wizardCurrentStep = 1;
         let adminAccessToken = null;
+        let customerAccessToken = null;
+        let pendingPasswordResetToken = null;
 
         // INITIALIZATION ON PAGE LOAD
         window.onload = function() {
@@ -1234,10 +1288,22 @@
             selectCategory('ecom');
             updateSubcatOptions();
             renderDashboardQueue();
+            if (window.location.hash.startsWith('#reset-password=')) {
+                pendingPasswordResetToken = window.location.hash.slice('#reset-password='.length);
+                if (pendingPasswordResetToken) {
+                    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                    toggleAuthModal(true, 'reset');
+                    showAuthStatus('Choose a new password to finish resetting your account.');
+                }
+            }
         };
 
         // NAVIGATION TAB SWITCHER
         function switchTab(tabId) {
+            if (tabId === 'dashboard' && !adminAccessToken) {
+                toggleAuthModal(true);
+                return;
+            }
             activeTab = tabId;
 
             // Hide all pages
@@ -1265,14 +1331,55 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function toggleAuthModal(show) {
+        function toggleAuthModal(show, view = 'login') {
             const modal = document.getElementById('auth-modal');
             if (!modal) return;
             modal.classList.toggle('hidden', !show);
             if (show) {
-                document.getElementById('auth-login-status').textContent = '';
-                window.setTimeout(() => document.getElementById('login-email').focus(), 0);
+                showAuthStatus('');
+                switchAuthView(view);
             }
+        }
+
+        function switchAuthView(view) {
+            const views = ['login', 'signup', 'forgot', 'reset'];
+            if (!views.includes(view)) view = 'login';
+            showAuthStatus('');
+
+            views.forEach(authView => {
+                document.getElementById(
+                    authView === 'reset' ? 'form-reset-password' : `form-${authView}`
+                ).classList.toggle('hidden', authView !== view);
+            });
+
+            const showTabs = view === 'login' || view === 'signup';
+            document.getElementById('auth-tab-header').classList.toggle('hidden', !showTabs);
+            document.getElementById('tab-btn-login').className = view === 'login'
+                ? 'pb-2 mr-6 font-bold text-cyan-400 border-b-2 border-cyan-400 text-sm'
+                : 'pb-2 mr-6 font-bold text-slate-400 hover:text-white text-sm';
+            document.getElementById('tab-btn-signup').className = view === 'signup'
+                ? 'pb-2 font-bold text-cyan-400 border-b-2 border-cyan-400 text-sm'
+                : 'pb-2 font-bold text-slate-400 hover:text-white text-sm';
+
+            if (view === 'forgot') {
+                document.getElementById('forgot-email').value =
+                    document.getElementById('login-email').value;
+            }
+            const focusTargets = {
+                login: 'login-email',
+                signup: 'signup-name',
+                forgot: 'forgot-email',
+                reset: 'reset-password'
+            };
+            window.setTimeout(() => document.getElementById(focusTargets[view]).focus(), 0);
+        }
+
+        function showAuthStatus(message, isError = false) {
+            const status = document.getElementById('auth-status');
+            status.textContent = message;
+            status.classList.toggle('hidden', !message);
+            status.classList.toggle('text-rose-300', isError);
+            status.classList.toggle('text-emerald-300', !isError);
         }
 
         function openPortal() {
@@ -1475,17 +1582,15 @@
             }
         }
 
-        // ACTIVATE TRIAL AND LAUNCH CLIENT DASHBOARD
-        function activateTrialAndGoToDashboard() {
-            const userUrl = document.getElementById('ob-url').value || 'mybrandstore.com';
-            const cleanUrl = userUrl.replace('https://', '').replace('http://', '');
-            const planName = document.getElementById('rec-plan-name').innerText;
-            const planPrice = document.getElementById('rec-plan-price').innerText;
-
-            document.getElementById('dash-brand-name').innerText = cleanUrl;
-            document.getElementById('dash-plan-badge').innerText = `${planName} (${planPrice})`;
-
-            switchTab('dashboard');
+        function completeTrialSetup() {
+            const status = document.getElementById('trial-setup-status');
+            status.textContent = customerAccessToken
+                ? 'Your recommendation is ready. Trial activation and a customer dashboard are not available yet.'
+                : 'Create an account to continue. No trial or subscription is created by this wizard.';
+            status.classList.remove('hidden');
+            if (!customerAccessToken) {
+                toggleAuthModal(true, 'signup');
+            }
         }
 
         // DASHBOARD INTERNAL TAB NAVIGATION
@@ -1544,7 +1649,10 @@
         }
 
         async function readApiResponse(response) {
-            const body = await response.json().catch(() => ({}));
+            const body = await response.json();
+            if (!body || typeof body !== 'object' || Array.isArray(body)) {
+                throw new Error('The server returned an invalid response.');
+            }
             if (!response.ok) {
                 const message = typeof body.detail === 'string'
                     ? body.detail
@@ -1554,38 +1662,103 @@
             return body;
         }
 
-        async function adminLogin(event) {
+        async function handleAuthSubmit(event, type) {
             event.preventDefault();
-            const statusElement = document.getElementById('admin-notice-status');
-            const authStatus = document.getElementById('auth-login-status');
-            const button = document.getElementById('auth-submit-button');
-            const email = document.getElementById('login-email').value.trim();
-            const passwordInput = document.getElementById('login-password');
-
-            if (!email || !passwordInput.value) {
-                authStatus.textContent = 'Enter your email and password.';
-                return;
-            }
-
+            const form = event.currentTarget;
+            const button = form.querySelector('button[type="submit"]');
             button.disabled = true;
-            authStatus.textContent = 'Signing in…';
+            showAuthStatus(
+                type === 'login' ? 'Signing in…' :
+                type === 'signup' ? 'Creating your account…' :
+                type === 'forgot' ? 'Requesting password recovery…' :
+                'Updating your password…'
+            );
+
             try {
-                const response = await fetch(`${adminApiBaseUrl()}/api/v1/auth/token`, {
+                let endpoint = '/api/v1/auth/token';
+                let payload;
+                if (type === 'login') {
+                    payload = {
+                        email: document.getElementById('login-email').value.trim(),
+                        password: document.getElementById('login-password').value
+                    };
+                } else if (type === 'signup') {
+                    endpoint = '/api/v1/auth/register';
+                    payload = {
+                        name: document.getElementById('signup-name').value.trim(),
+                        email: document.getElementById('signup-email').value.trim(),
+                        password: document.getElementById('signup-password').value
+                    };
+                } else if (type === 'forgot') {
+                    endpoint = '/api/v1/auth/reset-password';
+                    payload = { email: document.getElementById('forgot-email').value.trim() };
+                } else if (type === 'reset') {
+                    const password = document.getElementById('reset-password').value;
+                    if (password !== document.getElementById('reset-password-confirm').value) {
+                        showAuthStatus('The passwords do not match.', true);
+                        return;
+                    }
+                    endpoint = '/api/v1/auth/reset-password/confirm';
+                    payload = { token: pendingPasswordResetToken, password };
+                } else {
+                    throw new Error('Unsupported authentication action.');
+                }
+
+                const response = await fetch(`${adminApiBaseUrl()}${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password: passwordInput.value })
+                    body: JSON.stringify(payload)
                 });
                 const body = await readApiResponse(response);
-                adminAccessToken = body.access_token;
-                passwordInput.value = '';
-                authStatus.textContent = '';
-                statusElement.textContent = 'Signed in. Loading notices…';
-                toggleAuthModal(false);
-                switchTab('dashboard');
-                await loadAdminNotices();
+
+                if (
+                    (type === 'login' || type === 'signup') &&
+                    (typeof body.access_token !== 'string' || !body.access_token ||
+                        (type === 'login' && !['admin', 'customer'].includes(body.role)) ||
+                        (type === 'signup' && body.role !== 'customer'))
+                ) {
+                    throw new Error('The server returned an invalid authentication response.');
+                }
+                if (type === 'forgot' && typeof body.message !== 'string') {
+                    throw new Error('The server returned an invalid recovery response.');
+                }
+
+                if (type === 'login' && body.role === 'admin') {
+                    adminAccessToken = body.access_token;
+                    document.getElementById('login-password').value = '';
+                    document.getElementById('admin-notice-status').textContent = 'Signed in. Loading notices…';
+                    toggleAuthModal(false);
+                    switchTab('dashboard');
+                    await loadAdminNotices();
+                } else if (type === 'login' || type === 'signup') {
+                    customerAccessToken = body.access_token;
+                    document.getElementById(
+                        type === 'login' ? 'login-password' : 'signup-password'
+                    ).value = '';
+                    const trialStatus = document.getElementById('trial-setup-status');
+                    if (type === 'signup' && body.welcome_email_sent === false) {
+                        trialStatus.textContent = 'Your account was created, but the welcome email could not be sent. You can continue to plan setup.';
+                        trialStatus.classList.remove('hidden');
+                    } else {
+                        trialStatus.classList.add('hidden');
+                    }
+                    toggleAuthModal(false);
+                    switchTab('onboarding');
+                } else if (type === 'forgot') {
+                    showAuthStatus(body.message);
+                } else {
+                    pendingPasswordResetToken = null;
+                    document.getElementById('reset-password').value = '';
+                    document.getElementById('reset-password-confirm').value = '';
+                    switchAuthView('login');
+                    showAuthStatus('Password updated. Sign in with your new password.');
+                }
             } catch (error) {
-                adminAccessToken = null;
-                authStatus.textContent = `Sign-in failed: ${error.message}`;
+                if (type === 'login') {
+                    adminAccessToken = null;
+                    customerAccessToken = null;
+                }
+                showAuthStatus(`${type === 'login' ? 'Sign-in' : 'Request'} failed: ${error.message}`, true);
             } finally {
                 button.disabled = false;
             }

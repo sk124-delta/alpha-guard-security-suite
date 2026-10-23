@@ -1,8 +1,10 @@
-import os
-import uuid
+import hashlib
 import json
+import logging
+import os
 import re
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from ipaddress import ip_address
 from urllib.parse import urljoin, urlsplit
@@ -13,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from auth import (
@@ -20,6 +23,22 @@ from auth import (
     AdminLoginSchema,
     issue_admin_token,
     verify_admin_access,
+)
+from customer_auth import (
+    CUSTOMER_TOKEN_EXPIRE_MINUTES,
+    PASSWORD_RESET_EXPIRE_MINUTES,
+    CustomerLoginSchema,
+    CustomerRegistrationSchema,
+    PasswordResetConfirmSchema,
+    PasswordResetRequestSchema,
+    create_password_reset_token,
+    get_account_email_settings,
+    get_password_reset_settings,
+    hash_customer_password,
+    issue_customer_token,
+    send_password_reset_email,
+    send_welcome_email,
+    verify_customer_password,
 )
 from dmca_dispatcher import (
     DmcaDeliveryUnknownError,
@@ -29,6 +48,8 @@ from dmca_dispatcher import (
     send_dmca_notice,
 )
 from scanner import _validate_public_url, compare_hashes, compute_image_hash
+
+logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
@@ -66,6 +87,25 @@ class NoticeModel(Base):
     dispatched_at = Column(DateTime(timezone=True), nullable=True)
     dispatched_by = Column(String, nullable=True)
     provider_message_id = Column(String, nullable=True)
+
+
+class CustomerAccountModel(Base):
+    __tablename__ = "customer_accounts"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String(120), nullable=False)
+    email = Column(String(254), nullable=False, unique=True, index=True)
+    password_hash = Column(String(128), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+class PasswordResetModel(Base):
+    __tablename__ = "customer_password_resets"
+
+    token_hash = Column(String(64), primary_key=True)
+    email = Column(String(254), nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class ScanRequestSchema(BaseModel):
@@ -364,13 +404,172 @@ def detect_website_category(data: DomainInspectionSchema):
     }
 
 
-@app.post("/api/v1/auth/token")
-def create_admin_token(data: AdminLoginSchema):
+@app.post("/api/v1/auth/register")
+def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(get_db)):
+    reserved_emails = {
+        os.getenv("ADMIN_EMAIL", "").strip().lower(),
+        os.getenv("LEGAL_EMAIL", "").strip().lower(),
+    }
+    if data.email in reserved_emails:
+        raise HTTPException(status_code=409, detail="This email cannot be used for a customer account.")
+    if db.query(CustomerAccountModel).filter(CustomerAccountModel.email == data.email).first():
+        raise HTTPException(status_code=409, detail="An account with this email already exists.")
+
+    try:
+        access_token = issue_customer_token(data.email)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    customer = CustomerAccountModel(
+        name=data.name,
+        email=data.email,
+        password_hash=hash_customer_password(data.password),
+    )
+    db.add(customer)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="An account with this email already exists.") from exc
+
+    welcome_email_sent = False
+    try:
+        send_welcome_email(data.name, data.email, get_account_email_settings())
+        welcome_email_sent = True
+    except RuntimeError as exc:
+        logger.warning("Could not send customer welcome email: %s", exc)
+
     return {
-        "access_token": issue_admin_token(data),
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": CUSTOMER_TOKEN_EXPIRE_MINUTES * 60,
+        "role": "customer",
+        "welcome_email_sent": welcome_email_sent,
+    }
+
+
+@app.post("/api/v1/auth/token")
+def create_auth_token(data: CustomerLoginSchema, db: Session = Depends(get_db)):
+    customer = (
+        db.query(CustomerAccountModel)
+        .filter(CustomerAccountModel.email == data.email)
+        .first()
+    )
+    if customer:
+        if not verify_customer_password(data.password, customer.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
+        try:
+            access_token = issue_customer_token(customer.email)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "expires_in": CUSTOMER_TOKEN_EXPIRE_MINUTES * 60,
+            "role": "customer",
+        }
+
+    return {
+        "access_token": issue_admin_token(
+            AdminLoginSchema(email=data.email, password=data.password)
+        ),
         "token_type": "bearer",
         "expires_in": TOKEN_EXPIRE_MINUTES * 60,
+        "role": "admin",
     }
+
+
+@app.post("/api/v1/auth/reset-password")
+def request_customer_password_reset(
+    data: PasswordResetRequestSchema,
+    db: Session = Depends(get_db),
+):
+    try:
+        email_settings = get_password_reset_settings()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    customer = (
+        db.query(CustomerAccountModel)
+        .filter(CustomerAccountModel.email == data.email)
+        .first()
+    )
+    if not customer:
+        return {
+            "message": "If an account exists for this email, password recovery instructions have been sent."
+        }
+
+    raw_token, token_hash = create_password_reset_token()
+    now = datetime.now(timezone.utc)
+    db.query(PasswordResetModel).filter(
+        PasswordResetModel.email == customer.email,
+        PasswordResetModel.used_at.is_(None),
+    ).update({PasswordResetModel.used_at: now}, synchronize_session=False)
+    db.add(
+        PasswordResetModel(
+            token_hash=token_hash,
+            email=customer.email,
+            expires_at=now + timedelta(minutes=PASSWORD_RESET_EXPIRE_MINUTES),
+        )
+    )
+    db.commit()
+
+    try:
+        send_password_reset_email(customer.email, raw_token, email_settings)
+    except RuntimeError as exc:
+        db.query(PasswordResetModel).filter(
+            PasswordResetModel.token_hash == token_hash
+        ).update({PasswordResetModel.used_at: datetime.now(timezone.utc)})
+        db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail="Password recovery email could not be sent. Please try again later.",
+        ) from exc
+
+    return {
+        "message": "If an account exists for this email, password recovery instructions have been sent."
+    }
+
+
+@app.post("/api/v1/auth/reset-password/confirm")
+def confirm_customer_password_reset(
+    data: PasswordResetConfirmSchema,
+    db: Session = Depends(get_db),
+):
+    token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest()
+    reset = (
+        db.query(PasswordResetModel)
+        .filter(
+            PasswordResetModel.token_hash == token_hash,
+            PasswordResetModel.used_at.is_(None),
+        )
+        .first()
+    )
+    now = datetime.now(timezone.utc)
+    if not reset:
+        raise HTTPException(status_code=400, detail="The password reset link is invalid or expired.")
+
+    expires_at = reset.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at <= now:
+        raise HTTPException(status_code=400, detail="The password reset link is invalid or expired.")
+
+    customer = (
+        db.query(CustomerAccountModel)
+        .filter(CustomerAccountModel.email == reset.email)
+        .first()
+    )
+    if not customer:
+        raise HTTPException(status_code=400, detail="The password reset link is invalid or expired.")
+
+    customer.password_hash = hash_customer_password(data.password)
+    db.query(PasswordResetModel).filter(
+        PasswordResetModel.email == customer.email,
+        PasswordResetModel.used_at.is_(None),
+    ).update({PasswordResetModel.used_at: now}, synchronize_session=False)
+    db.commit()
+    return {"message": "Your password has been reset. You can now sign in."}
 
 
 @app.get("/api/v1/admin/me")
