@@ -2,11 +2,15 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/:path*",
       "destination": "/api/index.py"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/v1/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/((?!api/|v1/).*)",
       "destination": "/index.html"
     }
   ]

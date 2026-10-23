@@ -404,6 +404,7 @@ def detect_website_category(data: DomainInspectionSchema):
     }
 
 
+@app.post("/v1/auth/register")
 @app.post("/api/v1/auth/register")
 def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(get_db)):
     reserved_emails = {
@@ -451,6 +452,7 @@ def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(ge
     }
 
 
+@app.post("/v1/auth/token")
 @app.post("/api/v1/auth/token")
 def create_auth_token(data: CustomerLoginSchema, db: Session = Depends(get_db)):
     customer = (
@@ -486,6 +488,7 @@ def create_auth_token(data: CustomerLoginSchema, db: Session = Depends(get_db)):
     }
 
 
+@app.post("/v1/auth/reset-password")
 @app.post("/api/v1/auth/reset-password")
 def request_customer_password_reset(
     data: PasswordResetRequestSchema,
