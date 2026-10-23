@@ -1101,18 +1101,6 @@ async function handleAuthSubmit(event, type) {
 </script>
 </body>
 </html>
-        const data = await res.json().catch(() => ({}));
-        
-        alert(data.message || 'Authentication successful! Check your inbox for confirmation.');
-        localStorage.setItem('ag_token', data.token || data.access_token || 'demo_token_123');
-        toggleAuthModal(false);
-        
-    } catch (err) {
-        alert('Authentication processed successfully.');
-        toggleAuthModal(false);
-    }
-}
-</script>
     try {
         const res = await fetch('/api/index', {
             method: 'POST',
