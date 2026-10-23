@@ -1649,6 +1649,12 @@
         }
 
         async function readApiResponse(response) {
+            const contentType = response.headers.get('content-type') || '';
+            const mediaType = contentType.split(';', 1)[0].trim().toLowerCase();
+            if (mediaType !== 'application/json' && !mediaType.endsWith('+json')) {
+                throw new Error('Server returned non-JSON response. Check API route setup.');
+            }
+
             const body = await response.json();
             if (!body || typeof body !== 'object' || Array.isArray(body)) {
                 throw new Error('The server returned an invalid response.');

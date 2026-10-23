@@ -440,11 +440,14 @@ def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(ge
         logger.warning("Could not send customer welcome email: %s", exc)
 
     return {
+        "status": "success",
+        "message": "Account created successfully.",
         "access_token": access_token,
         "token_type": "bearer",
         "expires_in": CUSTOMER_TOKEN_EXPIRE_MINUTES * 60,
         "role": "customer",
         "welcome_email_sent": welcome_email_sent,
+        "email_dispatched": welcome_email_sent,
     }
 
 
@@ -463,6 +466,8 @@ def create_auth_token(data: CustomerLoginSchema, db: Session = Depends(get_db)):
         except RuntimeError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
+            "status": "success",
+            "message": "Sign in successful.",
             "access_token": access_token,
             "token_type": "bearer",
             "expires_in": CUSTOMER_TOKEN_EXPIRE_MINUTES * 60,
@@ -470,6 +475,8 @@ def create_auth_token(data: CustomerLoginSchema, db: Session = Depends(get_db)):
         }
 
     return {
+        "status": "success",
+        "message": "Sign in successful.",
         "access_token": issue_admin_token(
             AdminLoginSchema(email=data.email, password=data.password)
         ),
@@ -496,6 +503,7 @@ def request_customer_password_reset(
     )
     if not customer:
         return {
+            "status": "success",
             "message": "If an account exists for this email, password recovery instructions have been sent."
         }
 
@@ -527,6 +535,7 @@ def request_customer_password_reset(
         ) from exc
 
     return {
+        "status": "success",
         "message": "If an account exists for this email, password recovery instructions have been sent."
     }
 
@@ -569,7 +578,10 @@ def confirm_customer_password_reset(
         PasswordResetModel.used_at.is_(None),
     ).update({PasswordResetModel.used_at: now}, synchronize_session=False)
     db.commit()
-    return {"message": "Your password has been reset. You can now sign in."}
+    return {
+        "status": "success",
+        "message": "Your password has been reset. You can now sign in.",
+    }
 
 
 @app.get("/api/v1/admin/me")
