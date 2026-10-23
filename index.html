@@ -90,7 +90,7 @@
         html.light .bg-cyber-navy,
         html.light .bg-cyber-card,
         html.light .bg-cyber-black,
-        html.light .bg-slate-900,
+        html.light .bg-slate-900:not(.card-btn),
         html.light .bg-slate-950,
         html.light .cat-tab,
         html.light .bg-cyber-navy\/50,
@@ -110,7 +110,7 @@
         }
 
         /* Text: titles slate-900, body copy slate-600 (all AA on white / slate-50) */
-        html.light .text-white,
+        html.light .text-white:not(.card-btn),
         html.light .text-slate-100 {
             color: #0f172a !important;
         }
@@ -122,7 +122,7 @@
         html.light .text-slate-500 {
             color: #475569 !important;
         }
-        html.light .hover\:text-white:hover {
+        html.light .hover\:text-white:hover:not(.card-btn) {
             color: #0f172a !important;
         }
         html.light .hover\:bg-slate-800\/50:hover {
@@ -160,7 +160,7 @@
             color: #334155 !important;
             border-color: #e2e8f0 !important;
         }
-        html.light .hover\:bg-slate-800:hover,
+        html.light .hover\:bg-slate-800:hover:not(.card-btn),
         html.light .hover\:bg-slate-700:hover {
             background-color: #e2e8f0 !important;
         }
@@ -358,40 +358,40 @@
                             <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Choose a monthly plan or save with a six-month pass.</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div class="bg-cyber-navy/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 light:bg-white light:border-slate-300">
+                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20">Small Retail</span>
-                                        <span class="text-xs font-mono font-bold text-slate-300 light:text-slate-700">Growth Tier ($79 / mo)</span>
+                                        <span class="text-xs font-mono text-emerald-600 dark:text-cyan-400 font-semibold">Growth Tier ($79 / mo)</span>
                                     </div>
-                                    <h4 class="font-bold text-white light:text-slate-900 text-base">Small D2C Stores (Shopify / Etsy / Woo)</h4>
-                                    <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Independent online sellers who need simple, automated image and logo protection against dropshippers stealing product photos.</p>
+                                    <h4 class="font-bold text-slate-900 dark:text-white text-base">Small D2C Stores (Shopify / Etsy / Woo)</h4>
+                                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Independent online sellers who need simple, automated image and logo protection against dropshippers stealing product photos.</p>
                                 </div>
-                                <a href="https://link.payoneer.com/Token?t=5AB35FF56EDE4639B737DC4395A85981&amp;src=pl" target="_blank" rel="noopener noreferrer" class="w-full text-center block px-4 py-2.5 rounded-xl bg-cyber-cyan text-cyber-black font-bold text-xs hover:bg-cyber-cyandark transition-all glow-cyan">Start Free Trial ($79/mo)</a>
+                                <a href="https://link.payoneer.com/Token?t=5AB35FF56EDE4639B737DC4395A85981&amp;src=pl" target="_blank" rel="noopener noreferrer" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Start Free Trial ($79/mo)</a>
                             </div>
 
-                            <div class="bg-cyber-navy/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 light:bg-white light:border-slate-300">
+                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20">Growing Retail</span>
-                                        <span class="text-xs font-mono font-bold text-slate-300 light:text-slate-700">Pro Tier ($249 / mo)</span>
+                                        <span class="text-xs font-mono text-emerald-600 dark:text-cyan-400 font-semibold">Pro Tier ($249 / mo)</span>
                                     </div>
-                                    <h4 class="font-bold text-white light:text-slate-900 text-base">Mid-Sized Brands &amp; Tech Merch</h4>
-                                    <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Established online stores with large product catalogs that suffer from automated site scraping and clone storefronts.</p>
+                                    <h4 class="font-bold text-slate-900 dark:text-white text-base">Mid-Sized Brands &amp; Tech Merch</h4>
+                                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Established online stores with large product catalogs that suffer from automated site scraping and clone storefronts.</p>
                                 </div>
-                                <a href="https://link.payoneer.com/Token?t=0EEFDDC4AF1B4348AE333733DE21F325&amp;src=pl" target="_blank" rel="noopener noreferrer" class="w-full text-center block px-4 py-2.5 rounded-xl bg-cyber-cyan text-cyber-black font-bold text-xs hover:bg-cyber-cyandark transition-all glow-cyan">Start Free Trial ($249/mo)</a>
+                                <a href="https://link.payoneer.com/Token?t=0EEFDDC4AF1B4348AE333733DE21F325&amp;src=pl" target="_blank" rel="noopener noreferrer" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Start Free Trial ($249/mo)</a>
                             </div>
 
-                            <div class="bg-cyber-navy/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 light:bg-white light:border-slate-300">
+                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Apparel &amp; Fashion</span>
-                                        <span class="text-xs font-mono font-bold text-slate-300 light:text-slate-700">Pro Tier ($299 / mo)</span>
+                                        <span class="text-xs font-mono text-emerald-600 dark:text-cyan-400 font-semibold">Pro Tier ($299 / mo)</span>
                                     </div>
-                                    <h4 class="font-bold text-white light:text-slate-900 text-base">Fashion &amp; Boutique Apparel Labels</h4>
-                                    <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Designers whose campaign shoots, lookbooks, and garment photography are stolen by fast-fashion scam sites to sell knockoffs.</p>
+                                    <h4 class="font-bold text-slate-900 dark:text-white text-base">Fashion &amp; Boutique Apparel Labels</h4>
+                                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Designers whose campaign shoots, lookbooks, and garment photography are stolen by fast-fashion scam sites to sell knockoffs.</p>
                                 </div>
-                                <a href="https://link.payoneer.com/Token?t=359C304B88B748EF9F65FEB520F7D2E0&amp;src=pl" target="_blank" rel="noopener noreferrer" class="w-full text-center block px-4 py-2.5 rounded-xl bg-cyber-cyan text-cyber-black font-bold text-xs hover:bg-cyber-cyandark transition-all glow-cyan">Start Free Trial ($299/mo)</a>
+                                <a href="https://link.payoneer.com/Token?t=359C304B88B748EF9F65FEB520F7D2E0&amp;src=pl" target="_blank" rel="noopener noreferrer" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Start Free Trial ($299/mo)</a>
                             </div>
 
                             <div class="bg-cyber-navy/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 light:bg-white light:border-slate-300">
