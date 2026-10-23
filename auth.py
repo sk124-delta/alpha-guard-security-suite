@@ -168,3 +168,72 @@ async def forgot_password(data: dict):
         raise HTTPException(status_code=500, detail="Failed to dispatch email. Check SMTP server configuration.")
         
     return {"message": "Password reset link sent successfully."}
+    from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+import urllib.parse
+
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+
+# Helper function to normalize store URLs (e.g., "https://www.mystore.com/" -> "mystore.com")
+def extract_domain(url: str) -> str:
+    url = url.strip().lower()
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+    parsed = urllib.parse.urlparse(url)
+    domain = parsed.netloc or parsed.path
+    if domain.startswith('www.'):
+        domain = domain[4:]
+    return domain.split('/')[0]
+
+# Sample in-memory user database structure (Replace with your SQL/NoSQL DB queries)
+# Structure: { "email": {"email": ..., "password": ..., "store_name": ..., "store_domain": ...} }
+users_db = {}
+registered_domains = {}  # { "mystore.com": "registered_user_email@domain.com" }
+
+class RegisterRequest(BaseModel):
+    store_name: str
+    store_url: str  # Store URL or domain name
+    email: EmailStr
+    password: str
+
+@router.post("/register")
+async def register_user(data: RegisterRequest):
+    clean_email = data.email.strip().lower()
+    clean_domain = extract_domain(data.store_url)
+
+    # 1. Check if email is already registered
+    if clean_email in users_db:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An account with this email address already exists. Please sign in instead."
+        )
+
+    # 2. Check if store URL / domain is already registered to another account
+    if clean_domain in registered_domains:
+        existing_owner = registered_domains[clean_domain]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"The store domain '{clean_domain}' is already registered under another account. If you own this store, please contact support."
+        )
+
+    # 3. Save user and associate store domain
+    user_record = {
+        "email": clean_email,
+        "store_name": data.store_name,
+        "store_domain": clean_domain,
+        "password": data.password  # Remember to hash passwords using Passlib/Bcrypt
+    }
+    
+    users_db[clean_email] = user_record
+    registered_domains[clean_domain] = clean_email
+
+    return {
+        "status": "success",
+        "message": "Account created successfully.",
+        "user": {
+            "email": clean_email,
+            "store_name": data.store_name,
+            "store_domain": clean_domain
+        }
+    }

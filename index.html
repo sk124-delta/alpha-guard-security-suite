@@ -1647,3 +1647,90 @@ async function handleAuthSubmit(event, mode) {
         statusEl.textContent = err.message;
     }
 }
+<!-- Signup Form inside #auth-modal -->
+<form id="form-signup" onsubmit="handleAuthSubmit(event, 'signup')" class="space-y-4 hidden">
+    <div>
+        <label for="signup-name" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Store Name / Company</label>
+        <input type="text" id="signup-name" autocomplete="organization" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="Acme Store">
+    </div>
+    <div>
+        <label for="signup-url" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Store Website URL</label>
+        <input type="text" id="signup-url" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="https://acmestore.com">
+    </div>
+    <div>
+        <label for="signup-email" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Work Email</label>
+        <input type="email" id="signup-email" autocomplete="email" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="owner@acmestore.com">
+    </div>
+    <div>
+        <label for="signup-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Password (8 characters min)</label>
+        <input type="password" id="signup-password" autocomplete="new-password" minlength="8" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
+    </div>
+    <button type="submit" class="auth-submit-button w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Create Account & Start Trial</button>
+</form>
+async function handleAuthSubmit(event, mode) {
+    event.preventDefault();
+    const statusEl = document.getElementById('auth-status');
+    statusEl.classList.remove('hidden', 'text-red-400', 'text-emerald-400');
+    statusEl.textContent = 'Processing request...';
+
+    try {
+        let endpoint = '';
+        let payload = {};
+
+        if (mode === 'login') {
+            endpoint = '/api/v1/auth/login';
+            payload = {
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-password').value
+            };
+        } else if (mode === 'signup') {
+            endpoint = '/api/v1/auth/register';
+            payload = {
+                store_name: document.getElementById('signup-name').value,
+                store_url: document.getElementById('signup-url').value,
+                email: document.getElementById('signup-email').value,
+                password: document.getElementById('signup-password').value
+            };
+        } else if (mode === 'forgot') {
+            endpoint = '/api/v1/auth/forgot-password';
+            payload = { email: document.getElementById('forgot-email').value };
+        }
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            // Displays error message directly (e.g., "Account already exists" or "Store domain already claimed")
+            throw new Error(data.detail || 'An error occurred. Please try again.');
+        }
+
+        if (mode === 'forgot') {
+            statusEl.classList.add('text-emerald-400');
+            statusEl.textContent = 'Password reset link sent! Please check your inbox.';
+            return;
+        }
+
+        // Save session details and update header navigation
+        if (data.token || data.user) {
+            localStorage.setItem('ag_token', data.token || 'session_active');
+            localStorage.setItem('ag_user', JSON.stringify(data.user));
+        }
+
+        statusEl.classList.add('text-emerald-400');
+        statusEl.textContent = 'Success! Redirecting...';
+
+        setTimeout(() => {
+            toggleAuthModal(false);
+            if (typeof checkAuthState === 'function') checkAuthState();
+        }, 1000);
+
+    } catch (err) {
+        statusEl.classList.add('text-red-400');
+        statusEl.textContent = err.message;
+    }
+}
