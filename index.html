@@ -1550,3 +1550,100 @@
 </div>
 </body>
 </html>
+// Check authentication state on page load
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuthState();
+});
+
+function checkAuthState() {
+    const user = JSON.parse(localStorage.getItem('ag_user') || 'null');
+    const authBtn = document.getElementById('nav-auth-btn'); // Adjust ID to match your header sign-in button
+    const userProfileNav = document.getElementById('nav-user-profile'); // Header container for logged-in user
+
+    if (user && user.email) {
+        if (authBtn) authBtn.classList.add('hidden');
+        if (userProfileNav) {
+            userProfileNav.classList.remove('hidden');
+            userProfileNav.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <span class="text-sm font-semibold text-cyan-400">${user.store_name || user.email}</span>
+                    <button onclick="handleLogout()" class="text-xs text-slate-400 hover:text-white border border-slate-700 px-3 py-1 rounded-lg">Sign Out</button>
+                </div>
+            `;
+        }
+    }
+}
+
+function handleLogout() {
+    localStorage.removeItem('ag_token');
+    localStorage.removeItem('ag_user');
+    window.location.reload();
+}
+
+async function handleAuthSubmit(event, mode) {
+    event.preventDefault();
+    const statusEl = document.getElementById('auth-status');
+    statusEl.classList.remove('hidden', 'text-red-400', 'text-emerald-400');
+    statusEl.textContent = 'Processing request...';
+
+    try {
+        let endpoint = '';
+        let payload = {};
+
+        if (mode === 'login') {
+            endpoint = '/api/v1/auth/login';
+            payload = {
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-password').value
+            };
+        } else if (mode === 'signup') {
+            endpoint = '/api/v1/auth/register';
+            payload = {
+                store_name: document.getElementById('signup-name').value,
+                email: document.getElementById('signup-email').value,
+                password: document.getElementById('signup-password').value
+            };
+        } else if (mode === 'forgot') {
+            endpoint = '/api/v1/auth/forgot-password';
+            payload = {
+                email: document.getElementById('forgot-email').value
+            };
+        }
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || 'An error occurred. Please try again.');
+        }
+
+        if (mode === 'forgot') {
+            statusEl.classList.add('text-emerald-400');
+            statusEl.textContent = 'Password reset link sent! Check your inbox.';
+            return;
+        }
+
+        // Save session data for login and signup
+        if (data.token || data.access_token) {
+            localStorage.setItem('ag_token', data.token || data.access_token);
+            localStorage.setItem('ag_user', JSON.stringify(data.user || { email: payload.email, store_name: payload.store_name }));
+        }
+
+        statusEl.classList.add('text-emerald-400');
+        statusEl.textContent = 'Success! Redirecting...';
+
+        setTimeout(() => {
+            toggleAuthModal(false);
+            checkAuthState();
+        }, 1000);
+
+    } catch (err) {
+        statusEl.classList.add('text-red-400');
+        statusEl.textContent = err.message;
+    }
+}

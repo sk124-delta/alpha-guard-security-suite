@@ -111,3 +111,60 @@ def verify_admin_access(
             detail="Admin authorization required.",
         )
     return user_email
+import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from fastapi import APIRouter, HTTPException
+
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+
+SMTP_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("MAIL_PORT", 587))
+SENDER_EMAIL = os.getenv("MAIL_FROM", "alphaguard.securitysuite@gmail.com")
+SENDER_PASSWORD = os.getenv("MAIL_PASSWORD", "")
+
+def send_email(recipient: str, subject: str, body: str):
+    if not SENDER_PASSWORD:
+        print("Warning: MAIL_PASSWORD not configured. Email not sent.")
+        return False
+        
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"AlphaGuard Security <{SENDER_EMAIL}>"
+    msg["To"] = recipient
+
+    html_part = MIMEText(body, "html")
+    msg.attach(html_part)
+
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, recipient, msg.as_string())
+        server.close()
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
+
+@router.post("/forgot-password")
+async def forgot_password(data: dict):
+    email = data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+        
+    reset_token = "sample_reset_token_123"  # Replace with generated JWT/token logic
+    reset_url = f"https://alphaguardsuite.com/reset-password?token={reset_token}"
+    
+    html_content = f"""
+    <h3>AlphaGuard Security - Password Reset</h3>
+    <p>You requested a password reset for your account.</p>
+    <p>Click <a href="{reset_url}">here</a> to reset your password.</p>
+    """
+    
+    sent = send_email(email, "Reset Your AlphaGuard Password", html_content)
+    if not sent:
+        raise HTTPException(status_code=500, detail="Failed to dispatch email. Check SMTP server configuration.")
+        
+    return {"message": "Password reset link sent successfully."}
