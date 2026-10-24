@@ -1661,6 +1661,32 @@
 
         document.addEventListener('DOMContentLoaded', checkAuthState);
 
+        // Client portal tab switching (buttons: [data-portal-tab], panels: .portal-panel#panel-<name>)
+        function initDashboardTabs() {
+            const tabButtons = document.querySelectorAll('[data-portal-tab]');
+            const tabPanels = document.querySelectorAll('.portal-panel');
+            if (tabButtons.length === 0) return;
+
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetTab = btn.getAttribute('data-portal-tab');
+
+                    tabButtons.forEach(b => {
+                        b.classList.remove('bg-cyan-400', 'text-slate-950', 'border-cyan-400', 'font-bold');
+                        b.classList.add('text-slate-300', 'border-slate-800');
+                    });
+                    btn.classList.remove('text-slate-300', 'border-slate-800');
+                    btn.classList.add('bg-cyan-400', 'text-slate-950', 'border-cyan-400', 'font-bold');
+
+                    tabPanels.forEach(panel => {
+                        panel.classList.toggle('hidden', panel.id !== `panel-${targetTab}`);
+                    });
+                });
+            });
+        }
+        document.addEventListener('DOMContentLoaded', initDashboardTabs);
+
         function toggleTheme() {
             const html = document.documentElement;
             setThemeMode(html.classList.contains('dark') ? 'light' : 'dark');
