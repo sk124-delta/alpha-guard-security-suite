@@ -286,6 +286,38 @@
 @media (prefers-reduced-motion: reduce) {
   .ambient-orb { animation: none; }
 }
+/* Metric stat pulse */
+@keyframes statPulse {
+  0%, 100% { text-shadow: 0 0 4px rgba(0,240,255,0.12), 0 0 10px rgba(165,105,189,0.08); }
+  50% { text-shadow: 0 0 10px rgba(0,240,255,0.55), 0 0 22px rgba(165,105,189,0.35); }
+}
+#dash-sec-overview .text-2xl { animation: statPulse 3.6s ease-in-out infinite; }
+/* Explorer card tracking border */
+@property --ag-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes agBorderSpin { to { --ag-angle: 360deg; } }
+.cat-tab { position: relative; isolation: isolate; }
+.cat-tab::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 2px;
+  background: conic-gradient(from var(--ag-angle), transparent 0%, #a569bd 20%, #00f0ff 45%, #a569bd 70%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0; transition: opacity 0.35s ease; pointer-events: none; z-index: 1;
+  animation: agBorderSpin 3s linear infinite paused;
+}
+.cat-tab:hover { box-shadow: 0 0 22px rgba(165,105,189,0.28), 0 0 12px rgba(0,240,255,0.18); }
+.cat-tab:hover::before { opacity: 1; animation-play-state: running; }
+/* Status ticker */
+.ag-ticker { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.75rem; border-radius: 0.6rem;
+  border: 1px solid rgba(165,105,189,0.25); background: linear-gradient(90deg, rgba(165,105,189,0.08), rgba(0,240,255,0.06));
+  font-family: ui-monospace, monospace; font-size: 11px; overflow: hidden; }
+.ag-ticker-dot { width: 7px; height: 7px; border-radius: 9999px; background: #00f0ff; flex: none; animation: agDot 1.8s ease-in-out infinite; }
+@keyframes agDot { 0%,100% { box-shadow: 0 0 0 0 rgba(0,240,255,0.5); } 50% { box-shadow: 0 0 0 5px rgba(0,240,255,0); } }
+.ag-ticker-text { transition: opacity 0.5s ease, transform 0.5s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-ticker-text.out { opacity: 0; transform: translateY(6px); }
+@media (prefers-reduced-motion: reduce) {
+  #dash-sec-overview .text-2xl, .ag-ticker-dot { animation: none; }
+  .cat-tab::before { animation: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .cyber-scanner::after { animation: none; display: none; }
 }
@@ -927,6 +959,11 @@
 
                 <!-- Live Pipeline Quick Preview -->
                 <div class="p-6 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f] space-y-4">
+                    <div class="ag-ticker" role="status" aria-live="off">
+                        <span class="ag-ticker-dot"></span>
+                        <span class="text-cyber-cyan font-semibold">LIVE</span>
+                        <span id="agTickerText" class="ag-ticker-text text-slate-400">Perimeter scan nominal — all monitored sites healthy</span>
+                    </div>
                     <div class="flex items-center justify-between">
                         <h3 class="font-bold text-white light:text-slate-900 flex items-center space-x-2 text-sm">
                             <i data-lucide="shield-ellipsis" class="w-4 h-4 text-cyber-cyan"></i>
@@ -1587,6 +1624,28 @@
                 toggleAuthModal(false);
             }
         });
+
+        // LIVE STATUS TICKER
+        (function () {
+            const el = document.getElementById('agTickerText');
+            if (!el) return;
+            const msgs = [
+                'Perimeter scan nominal — all monitored sites healthy',
+                'Crawler sweep complete — 120 new URLs indexed in the last hour',
+                'Takedown pipeline healthy — DMCA dispatch queue responding',
+                'Webhook heartbeat verified — 100% delivery on synced sites',
+                'Threat signatures refreshed — detection models up to date'
+            ];
+            let i = 0;
+            setInterval(() => {
+                el.classList.add('out');
+                setTimeout(() => {
+                    i = (i + 1) % msgs.length;
+                    el.textContent = msgs[i];
+                    el.classList.remove('out');
+                }, 500);
+            }, 4500);
+        })();
 
         // INDUSTRY CATEGORY SELECTION IN EXPLORER
         function selectCategory(catKey) {
