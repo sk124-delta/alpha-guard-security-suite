@@ -90,7 +90,9 @@
         }
 
         html.light .hero-banner {
-            background: linear-gradient(180deg, #f5f3fa 0%, #f0eef6 100%) !important;
+            background-color: #f5f3fa !important;
+            background-image: radial-gradient(rgba(142, 68, 173, 0.28) 1px, transparent 1px) !important;
+            background-size: 24px 24px !important;
             border-color: #cbd5e1 !important;
         }
 
@@ -330,9 +332,8 @@
         <!-- ================= PAGE 1: LANDING & PUBLIC INDUSTRY EXPLORER ================= -->
         <section id="page-landing" class="space-y-12 transition-opacity duration-300">
             <!-- Hero Banner -->
-            <div class="hero-banner cyber-scanner relative rounded-2xl overflow-hidden border border-[#e2dcf2] dark:border-[#32214f] bg-[#f5f3fa] dark:bg-[#100a1d] p-8 sm:p-12 text-center">
+            <div class="hero-banner relative overflow-hidden cyber-grid-bg cyber-scanner rounded-2xl border border-[#e2dcf2] dark:border-[#32214f] bg-[#f5f3fa] dark:bg-[#100a1d] p-8 sm:p-12 text-center">
                 <div class="hero-glow"></div>
-                <div class="cyber-grid-bg absolute inset-0 opacity-60 pointer-events-none"></div>
                 
                 <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full border border-cyber-cyan/30 bg-cyber-cyan/10 text-cyber-cyan text-xs font-mono mb-6">
                     <span class="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse"></span>
