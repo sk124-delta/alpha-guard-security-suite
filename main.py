@@ -12,6 +12,7 @@ from urllib.parse import urljoin, urlsplit
 import requests
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, create_engine
@@ -275,6 +276,17 @@ if frontend_origins:
         allow_methods=["GET", "POST"],
         allow_headers=["Authorization", "Content-Type"],
     )
+
+
+INDEX_HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def read_index():
+    if os.path.exists(INDEX_HTML_PATH):
+        with open(INDEX_HTML_PATH, "r", encoding="utf-8") as f:
+            return f.read()
+    return HTMLResponse("<h1>index.html not found</h1>", status_code=404)
 
 
 def get_db():
