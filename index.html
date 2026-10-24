@@ -15,7 +15,7 @@
                         cyber: {
                             navy: '#0a0f1d',
                             darknavy: '#0b132b',
-                            black: '#05070d',
+                            black: '#090d16',
                             cyan: '#00f0ff',
                             cyandark: '#00b8cc',
                             card: '#111827',
@@ -84,18 +84,24 @@
 
         /* Base Containers & Cards in Light Mode */
         html.light body#appBody {
+            background-color: #f8fafc !important;
+        }
+
+        html.light .bg-cyber-card,
+        html.light .bg-slate-900:not(.card-btn),
+        html.light .bg-slate-900\/50,
+        html.light .bg-slate-900\/60 {
             background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.06);
         }
 
         html.light .bg-cyber-navy,
-        html.light .bg-cyber-card,
         html.light .bg-cyber-black,
-        html.light .bg-slate-900:not(.card-btn),
         html.light .bg-slate-950,
         html.light .bg-cyber-navy\/50,
-        html.light .bg-cyber-navy\/80,
-        html.light .bg-slate-900\/50,
-        html.light .bg-slate-900\/60 {
+        html.light .bg-cyber-navy\/80 {
             background-color: #f8fafc !important;
             border-color: #e2e8f0 !important;
             color: #0f172a !important;
@@ -167,14 +173,46 @@
         /* Primary buttons: sky-500 / white, hover sky-600 */
         html.light .bg-cyber-cyan,
         html.light .bg-sky-500,
+        html.light .bg-sky-600,
         html.light .hover\:bg-cyber-cyan:hover {
-            background-color: #0ea5e9 !important;
+            background-color: #0284c7 !important;
             color: #ffffff !important;
             font-weight: 700;
         }
         html.light .hover\:bg-cyber-cyandark:hover,
-        html.light .hover\:bg-sky-600:hover {
-            background-color: #0284c7 !important;
+        html.light .hover\:bg-sky-600:hover,
+        html.light .hover\:bg-sky-700:hover {
+            background-color: #0369a1 !important;
+        }
+
+        /* Headings and body copy defaults (utility classes still win in dark mode) */
+        html.light h1, html.light h2, html.light h3 { color: #0f172a; }
+        html.light main p:not([class*="text-"]) { color: #475569; }
+        html.dark main p:not([class*="text-"]) { color: #cbd5e1; }
+
+        /* Hero glow */
+        @keyframes heroGlow {
+            0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.15); }
+        }
+        .hero-glow {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            width: 36rem;
+            max-width: 90%;
+            height: 18rem;
+            border-radius: 9999px;
+            background: radial-gradient(closest-side, rgba(0, 240, 255, 0.35), rgba(14, 165, 233, 0.15) 60%, transparent);
+            filter: blur(40px);
+            pointer-events: none;
+            animation: heroGlow 6s ease-in-out infinite;
+        }
+        html.light .hero-glow {
+            background: radial-gradient(closest-side, rgba(14, 165, 233, 0.28), rgba(56, 189, 248, 0.12) 60%, transparent);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .hero-glow { animation: none; opacity: 0.4; transform: translate(-50%, -50%); }
         }
 
         /* Active nav pill: slate-900 / white */
@@ -227,7 +265,7 @@
                 </button>
                 <div id="nav-user-profile" class="hidden items-center space-x-2"></div>
 
-                <button type="button" onclick="startTrial()" class="bg-sky-500 hover:bg-sky-600 dark:bg-cyan-400 dark:hover:bg-cyan-300 text-white dark:text-slate-950 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all">
+                <button type="button" onclick="startTrial()" class="bg-sky-600 hover:bg-sky-700 dark:bg-cyan-400 dark:hover:bg-cyan-300 text-white dark:text-slate-950 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all shadow-lg">
                     Start 7-Day Free Trial
                 </button>
             </div>
@@ -241,6 +279,7 @@
         <section id="page-landing" class="space-y-12 transition-opacity duration-300">
             <!-- Hero Banner -->
             <div class="hero-banner relative rounded-2xl overflow-hidden border border-slate-800 bg-gradient-to-b from-cyber-navy via-cyber-black to-slate-950 p-8 sm:p-12 text-center">
+                <div class="hero-glow"></div>
                 <div class="absolute inset-0 bg-[radial-gradient(#00f0ff_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none"></div>
                 
                 <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full border border-cyber-cyan/30 bg-cyber-cyan/10 text-cyber-cyan text-xs font-mono mb-6">
@@ -257,7 +296,7 @@
                 </p>
 
                 <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button onclick="switchTab('onboarding')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-sky-500 hover:bg-sky-600 dark:bg-cyan-400 dark:hover:bg-cyan-300 text-white dark:text-slate-950 font-bold text-base transition-all flex items-center justify-center space-x-2">
+                    <button onclick="switchTab('onboarding')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-sky-600 hover:bg-sky-700 dark:bg-cyan-400 dark:hover:bg-cyan-300 text-white dark:text-slate-950 font-bold text-base transition-all shadow-lg flex items-center justify-center space-x-2">
                         <i data-lucide="shield" class="w-5 h-5"></i>
                         <span>Start 7-Day Free Trial (Cancel Anytime)</span>
                     </button>
