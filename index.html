@@ -306,6 +306,42 @@
 }
 .cat-tab:hover { box-shadow: 0 0 22px rgba(165,105,189,0.28), 0 0 12px rgba(0,240,255,0.18); }
 .cat-tab:hover::before { opacity: 1; animation-play-state: running; }
+/* Lower-section tech mesh backgrounds */
+#explorer > div.rounded-2xl, #explorer .cat-tab, [id^="dash-sec-"] div.rounded-2xl {
+  background-image: radial-gradient(var(--ag-dot) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+[id^="dash-sec-"] div.rounded-2xl {
+  background-image: radial-gradient(var(--ag-dot) 1px, transparent 1.2px),
+    repeating-linear-gradient(135deg, var(--ag-line) 0 1px, transparent 1px 14px);
+  background-size: 18px 18px, auto;
+}
+html.light { --ag-dot: rgba(124,58,237,.18); --ag-line: rgba(124,58,237,.05); }
+html.dark, html:not(.light) { --ag-dot: rgba(165,105,189,.22); --ag-line: rgba(0,240,255,.04); }
+/* Light mode contrast */
+html.light #explorer .cat-tab:not(.border-cyber-cyan),
+html.light #explorer > div.rounded-2xl,
+html.light [id^="dash-sec-"] div.rounded-2xl { border-color: #b8a9fc; }
+html.light #explorer .cat-tab:not(.border-cyber-cyan):hover { border-color: #7c3aed; }
+html.light #explorer .cat-tab h3,
+html.light [id^="dash-sec-"] h3 { color: #311060; }
+html.light #explorer .cat-tab svg.lucide,
+html.light #dash-sec-overview svg.lucide { stroke: #7c3aed; color: #7c3aed; }
+html.light .ag-gfx .stroke-slate-400, html.light .ag-wave .stroke-slate-400 { stroke: #7c3aed; opacity: .85; }
+html.light .ag-gfx .text-purple-500, html.light .ag-wave.text-purple-500 { color: #311060; }
+html.light .ag-gfx .dark\:text-purple-500, html.light .ag-gfx .text-cyan-400 { color: #7c3aed; }
+html.light .ag-gfx .dark\:text-cyan-400 { color: #311060; }
+html.light .ag-wave { color: #7c3aed; }
+html.light .ag-ticker { border-color: #b8a9fc; background: linear-gradient(90deg, rgba(124,58,237,.08), rgba(124,58,237,.03)); }
+html.light .ag-ticker .text-cyber-cyan { color: #311060; }
+html.light .ag-ticker-text { color: #311060; }
+html.light .ag-ticker-dot { background: #7c3aed; }
+/* Dark mode luminous highlights */
+html.dark .ag-gfx .stroke-slate-400, html.dark .ag-wave .stroke-slate-400 { stroke: #a569bd; }
+html.dark .ag-gfx .dark\:text-cyan-400, html.dark .ag-wave.dark\:text-cyan-400 { color: #00f0ff; }
+html.dark .ag-gfx .dark\:text-purple-500 { color: #c58fe0; }
+html.dark .ag-gfx, html.dark .ag-wave { filter: drop-shadow(0 0 4px rgba(0,240,255,.55)) drop-shadow(0 0 8px rgba(165,105,189,.35)); }
+html.dark .ag-ticker-dot { box-shadow: 0 0 8px #00f0ff; }
 /* SVG graphics */
 .ag-gfx { transition: transform .3s ease, opacity .3s ease; opacity: .9; }
 .cat-tab:hover .ag-gfx { transform: translateY(-1px); opacity: 1; }
