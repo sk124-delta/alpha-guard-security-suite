@@ -1373,10 +1373,19 @@
             status.classList.toggle('text-emerald-300', !isError);
         }
 
+        function normalizeStoreDomain(url) {
+            let value = (url || '').trim().toLowerCase();
+            if (!value) return '';
+            if (!value.includes('://')) value = 'https://' + value;
+            try {
+                return new URL(value).hostname.replace(/^www\./, '');
+            } catch (e) { return ''; }
+        }
+
         function hasActiveSession() {
             try {
                 const user = JSON.parse(localStorage.getItem('ag_user') || 'null');
-                return !!(localStorage.getItem('ag_token') && user && user.email);
+                return !!(user && user.email);
             } catch (e) { return false; }
         }
 
@@ -1513,8 +1522,12 @@
                 payload.password = document.getElementById('login-password').value;
             } else if (type === 'signup') {
                 payload.name = document.getElementById('signup-name').value;
-                payload.store_url = document.getElementById('signup-url').value;
-                payload.email = document.getElementById('signup-email').value;
+                payload.store_url = normalizeStoreDomain(document.getElementById('signup-url').value);
+                if (!payload.store_url || !payload.store_url.includes('.')) {
+                    alert('Enter a valid store URL, e.g. https://acmestore.com');
+                    return;
+                }
+                payload.email = document.getElementById('signup-email').value.trim().toLowerCase();
                 payload.password = document.getElementById('signup-password').value;
             } else if (type === 'forgot') {
                 payload.email = document.getElementById('forgot-email').value;
