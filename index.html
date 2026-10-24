@@ -1,10 +1,20 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AlphaGuard Security Suite | Automated Digital Asset Defense</title>
     <!-- Tailwind CSS v3 -->
+    <script>
+        (function () {
+            let mode = null;
+            try { mode = localStorage.getItem('ag_theme'); } catch (e) { /* storage unavailable */ }
+            if (mode !== 'light' && mode !== 'dark') {
+                mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            document.documentElement.classList.add(mode);
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -1379,6 +1389,7 @@
 
         window.onload = function() {
             safeInit('icons', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+            safeInit('theme icons', () => setThemeMode(document.documentElement.classList.contains('light') ? 'light' : 'dark'));
             safeInit('categories', () => selectCategory('ecom'));
             safeInit('subcategories', updateSubcatOptions);
             safeInit('queue', renderDashboardQueue);
@@ -1743,6 +1754,7 @@
             const html = document.documentElement;
             const sunIcon = document.getElementById('themeIconSun');
             const moonIcon = document.getElementById('themeIconMoon');
+            try { localStorage.setItem('ag_theme', mode === 'light' ? 'light' : 'dark'); } catch (e) { /* storage unavailable */ }
             if (mode === 'light') {
                 html.classList.remove('dark');
                 html.classList.add('light');
