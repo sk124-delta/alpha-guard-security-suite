@@ -22,14 +22,14 @@
             theme: {
                 extend: {
                     colors: {
-                        slate: { 900: '#111827' },
+                        slate: { 900: '#1e293b', 950: '#0f172a' },
                         cyber: {
-                            navy: '#0a0f1d',
+                            navy: '#0f172a',
                             darknavy: '#0b132b',
-                            black: '#090d16',
+                            black: '#0f172a',
                             cyan: '#00f0ff',
                             cyandark: '#00b8cc',
-                            card: '#111827',
+                            card: '#1e293b',
                             border: '#1e293b'
                         }
                     },
@@ -73,7 +73,7 @@
         }
         /* --- STUNNING & LEGIBLE LIGHT MODE THEME --- */
         html.light body {
-            background-color: #f8fafc !important;
+            background-color: #f1f5f9 !important;
             color: #0f172a !important;
         }
 
@@ -95,7 +95,7 @@
 
         /* Base Containers & Cards in Light Mode */
         html.light body#appBody {
-            background-color: #f8fafc !important;
+            background-color: #f1f5f9 !important;
         }
 
         html.light .bg-cyber-card,
@@ -113,7 +113,7 @@
         html.light .bg-slate-950,
         html.light .bg-cyber-navy\/50,
         html.light .bg-cyber-navy\/80 {
-            background-color: #f8fafc !important;
+            background-color: #f1f5f9 !important;
             border-color: #e2e8f0 !important;
             color: #0f172a !important;
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -265,10 +265,10 @@
 }
 </style>
 </head>
-<body class="bg-[#f8fafc] dark:bg-[#090d16] text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-300" id="appBody">
+<body class="bg-[#f1f5f9] dark:bg-[#0f172a] text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-300" id="appBody">
 
     <!-- TOP NAVIGATION BAR -->
-    <header class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#111827]/90 backdrop-blur-md transition-colors">
+    <header class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md transition-colors">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <!-- Brand Logo -->
             <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('landing')">
@@ -320,7 +320,7 @@
         <!-- ================= PAGE 1: LANDING & PUBLIC INDUSTRY EXPLORER ================= -->
         <section id="page-landing" class="space-y-12 transition-opacity duration-300">
             <!-- Hero Banner -->
-            <div class="hero-banner relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#090d16] p-8 sm:p-12 text-center">
+            <div class="hero-banner relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0f172a] p-8 sm:p-12 text-center">
                 <div class="hero-glow"></div>
                 <div class="absolute inset-0 bg-[radial-gradient(#00f0ff_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none"></div>
                 
@@ -348,7 +348,7 @@
                 </div>
 
                 <!-- Feature Pillars Badges -->
-                <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 pt-8 border-t border-slate-200 dark:border-slate-800/80">
+                <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 pt-8 border-t border-slate-200 dark:border-slate-700/80">
                     <div class="flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-mono">
                         <i data-lucide="check-circle-2" class="w-4 h-4 text-cyber-cyan"></i>
                         <span>Reverse Visual Hashing</span>
@@ -394,7 +394,7 @@
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">D2C Stores, Fashion, Cosmetics & Consumer Tech</p>
                     </button>
 
-                    <button onclick="selectCategory('creator')" id="cat-btn-creator" class="cat-tab p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
+                    <button onclick="selectCategory('creator')" id="cat-btn-creator" class="cat-tab p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
                         <div class="flex items-center justify-between mb-2">
                             <i data-lucide="video" class="w-6 h-6 text-indigo-400"></i>
                             <span class="text-xs font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">Creator Media</span>
@@ -403,7 +403,7 @@
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">EdTech Courses, Influencers & Video Creators</p>
                     </button>
 
-                    <button onclick="selectCategory('creative')" id="cat-btn-creative" class="cat-tab p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
+                    <button onclick="selectCategory('creative')" id="cat-btn-creative" class="cat-tab p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
                         <div class="flex items-center justify-between mb-2">
                             <i data-lucide="code" class="w-6 h-6 text-emerald-400"></i>
                             <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">Digital Assets</span>
@@ -412,7 +412,7 @@
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">UI/UX Templates, Photographers & PDF Authors</p>
                     </button>
 
-                    <button onclick="selectCategory('specialized')" id="cat-btn-specialized" class="cat-tab p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
+                    <button onclick="selectCategory('specialized')" id="cat-btn-specialized" class="cat-tab p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
                         <div class="flex items-center justify-between mb-2">
                             <i data-lucide="shield-alert" class="w-6 h-6 text-amber-400"></i>
                             <span class="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">High Risk</span>
@@ -423,7 +423,7 @@
                 </div>
 
                 <!-- Sub-category Listing Panel -->
-                <div class="bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <div class="bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
                     <div id="subcat-header" class="mb-6 pb-4 border-b border-slate-800 light:border-slate-200">
                         <!-- Dynamic Subcat Title injected via JS -->
                     </div>
@@ -438,7 +438,7 @@
                             <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Choose a monthly plan or save with a six-month pass.</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
+                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20">Small Retail</span>
@@ -450,7 +450,7 @@
                                 <a href="https://link.payoneer.com/Token?t=5AB35FF56EDE4639B737DC4395A85981&amp;src=pl" target="_blank" rel="noopener noreferrer" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Start Free Trial ($79/mo)</a>
                             </div>
 
-                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
+                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyber-cyan border border-cyan-500/20">Growing Retail</span>
@@ -462,7 +462,7 @@
                                 <a href="https://link.payoneer.com/Token?t=0EEFDDC4AF1B4348AE333733DE21F325&amp;src=pl" target="_blank" rel="noopener noreferrer" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Start Free Trial ($249/mo)</a>
                             </div>
 
-                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
+                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Apparel &amp; Fashion</span>
@@ -474,7 +474,7 @@
                                 <a href="https://link.payoneer.com/Token?t=359C304B88B748EF9F65FEB520F7D2E0&amp;src=pl" target="_blank" rel="noopener noreferrer" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Start Free Trial ($299/mo)</a>
                             </div>
 
-                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
+                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Enterprise</span>
@@ -486,7 +486,7 @@
                                 <a href="https://link.payoneer.com/Token?t=991BC588E25E49338F7BD39F3F7328CE&amp;src=pl" target="_blank" rel="noopener noreferrer" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Activate Enterprise ($899/mo)</a>
                             </div>
 
-                            <div class="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
+                            <div class="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div class="absolute top-0 right-0 bg-cyber-cyan text-cyber-black text-[9px] font-bold px-2 py-0.5 rounded-bl font-mono">SAVE $75</div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
@@ -499,7 +499,7 @@
                                 <a href="https://link.payoneer.com/Token?t=102EE28B56F74138B5DEA427401260A4&amp;src=pl" target="_blank" rel="noopener noreferrer" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Get 6-Month Plan ($399)</a>
                             </div>
 
-                            <div class="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
+                            <div class="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
                                 <div class="absolute top-0 right-0 bg-cyber-cyan text-cyber-black text-[9px] font-bold px-2 py-0.5 rounded-bl font-mono">SAVE $204</div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
@@ -541,7 +541,7 @@
             </div>
 
             <!-- Wizard Card Container -->
-            <div class="max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
+            <div class="max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 sm:p-8 shadow-xl">
                 
                 <!-- STEP 1: Business Category & Niche Selection -->
                 <div id="step-1" class="wizard-step space-y-6">
@@ -766,7 +766,7 @@
         <!-- ================= PAGE 3: DYNAMIC CLIENT DASHBOARD ================= -->
         <section id="page-dashboard" class="hidden space-y-8 transition-opacity duration-300">
             <!-- Dashboard Top Bar / Sync Info -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-xl bg-cyber-black border border-cyber-cyan/40 flex items-center justify-center glow-cyan-sm dark:bg-cyber-black light:bg-slate-100">
                         <i data-lucide="shield-alert" class="w-7 h-7 text-cyber-cyan"></i>
@@ -848,7 +848,7 @@
             <div id="dash-sec-overview" class="space-y-6">
                 <!-- Stat Cards Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between text-slate-400 text-xs font-mono">
                             <span>WEBSITES SYNCED</span>
                             <i data-lucide="globe" class="w-4 h-4 text-cyber-cyan"></i>
@@ -857,7 +857,7 @@
                         <div class="text-[11px] text-emerald-400 mt-1">100% Webhook Health</div>
                     </div>
 
-                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between text-slate-400 text-xs font-mono">
                             <span>TOTAL SCANS PERFORMED</span>
                             <i data-lucide="search" class="w-4 h-4 text-indigo-400"></i>
@@ -866,7 +866,7 @@
                         <div class="text-[11px] text-slate-400 mt-1">+120 scans last hour</div>
                     </div>
 
-                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between text-slate-400 text-xs font-mono">
                             <span>THREATS IDENTIFIED</span>
                             <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
@@ -875,7 +875,7 @@
                         <div class="text-[11px] text-slate-400 mt-1">3 pending resolution</div>
                     </div>
 
-                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between text-slate-400 text-xs font-mono">
                             <span>NOTICES DISPATCHED</span>
                             <i data-lucide="send" class="w-4 h-4 text-cyan-400"></i>
@@ -884,7 +884,7 @@
                         <div class="text-[11px] text-slate-400 mt-1">DMCA & SERP De-index</div>
                     </div>
 
-                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                         <div class="flex items-center justify-between text-slate-400 text-xs font-mono">
                             <span>TAKEDOWN SUCCESS RATE</span>
                             <i data-lucide="check-check" class="w-4 h-4 text-emerald-400"></i>
@@ -895,7 +895,7 @@
                 </div>
 
                 <!-- Live Pipeline Quick Preview -->
-                <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="font-bold text-white light:text-slate-900 flex items-center space-x-2 text-sm">
                             <i data-lucide="shield-ellipsis" class="w-4 h-4 text-cyber-cyan"></i>
@@ -951,7 +951,7 @@
                     </div>
                 </div>
 
-                <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-4">
                     <div>
                         <h3 class="font-bold text-slate-900 dark:text-white text-base">7-Day Multi-Tier Escalation Queue</h3>
                         <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Our automated engine escalates unresponsive hosts across 3 distinct legal tiers every 48–72 hours.</p>
@@ -997,7 +997,7 @@
 
             <!-- TAB 3: SITE CONNECTION & ASSET IMPORTER TOOL -->
             <div id="dash-sec-importer" class="hidden space-y-6">
-                <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-6 max-w-3xl">
+                <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-6 max-w-3xl">
                     <div>
                         <h3 class="font-bold text-white light:text-slate-900 text-base flex items-center space-x-2">
                             <i data-lucide="plus-circle" class="w-5 h-5 text-cyber-cyan"></i>
@@ -1053,7 +1053,7 @@
 
             <!-- TAB 4: CLIENT SETTINGS & THEME CUSTOMIZATION -->
             <div id="dash-sec-settings" class="hidden space-y-6">
-                <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-6 max-w-3xl">
+                <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 space-y-6 max-w-3xl">
                     <div>
                         <h3 class="font-bold text-white light:text-slate-900 text-base flex items-center space-x-2">
                             <i data-lucide="sliders" class="w-5 h-5 text-cyber-cyan"></i>
@@ -1119,7 +1119,7 @@
     </main>
 
     <!-- FOOTER -->
-    <footer class="mt-16 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827]/80 py-8 text-xs text-slate-500">
+    <footer class="mt-16 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e293b]/80 py-8 text-xs text-slate-500">
         <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center space-x-2">
                 <i data-lucide="shield-check" class="w-4 h-4 text-cyber-cyan"></i>
@@ -1134,7 +1134,7 @@
 
     <!-- ================= DMCA NOTICE & VISUAL PROOF MODAL ================= -->
     <div id="dmca-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 text-slate-800 dark:text-slate-100 shadow-2xl relative">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 text-slate-800 dark:text-slate-100 shadow-2xl relative">
             <button onclick="closeDmcaModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white" aria-label="Close DMCA notice">✕</button>
 
             <div class="flex items-center space-x-3 mb-4">
@@ -1564,12 +1564,12 @@
 
             document.querySelectorAll('.cat-tab').forEach(btn => {
                 btn.classList.remove('border-cyber-cyan');
-                btn.classList.add('border-slate-200', 'dark:border-slate-800');
+                btn.classList.add('border-slate-200', 'dark:border-slate-700');
             });
 
             const activeBtn = document.getElementById(`cat-btn-${catKey}`);
             if (activeBtn) {
-                activeBtn.classList.remove('border-slate-200', 'dark:border-slate-800');
+                activeBtn.classList.remove('border-slate-200', 'dark:border-slate-700');
                 activeBtn.classList.add('border-cyber-cyan');
             }
 
@@ -1587,7 +1587,7 @@
             const container = document.getElementById('subcat-container');
             if (container) {
                 container.innerHTML = cat.subcats.map(sub => `
-                    <div class="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none space-y-3 flex flex-col justify-between hover:border-cyber-cyan/50 transition-all">
+                    <div class="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none space-y-3 flex flex-col justify-between hover:border-cyber-cyan/50 transition-all">
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-sky-700 dark:text-cyber-cyan border border-cyber-cyan/30">${sub.badge}</span>
@@ -1596,7 +1596,7 @@
                             <h4 class="font-bold text-slate-900 dark:text-white text-sm">${sub.name}</h4>
                             <p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">${sub.desc}</p>
                         </div>
-                        <div class="pt-3 border-t border-slate-200 dark:border-slate-800/80">
+                        <div class="pt-3 border-t border-slate-200 dark:border-slate-700/80">
                             <div class="text-[11px] font-mono text-slate-600 dark:text-slate-400">Primary Target Threat:</div>
                             <div class="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center space-x-1 mt-0.5">
                                 <span>⚠️ ${sub.threat}</span>
@@ -1823,7 +1823,7 @@
 
 <!-- Auth Modal -->
 <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto relative shadow-2xl">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-8 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto relative shadow-2xl">
         <button type="button" onclick="toggleAuthModal(false)" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
         
         <div class="mb-6">
