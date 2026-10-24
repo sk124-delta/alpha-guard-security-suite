@@ -1330,21 +1330,68 @@
         let pendingPasswordResetToken = null;
 
         // INITIALIZATION ON PAGE LOAD
+        function safeInit(label, fn) {
+            try { fn(); } catch (err) { console.error(`Init step "${label}" failed:`, err); }
+        }
+
+        function renderDashboardQueue() {
+            const targets = [
+                { el: document.getElementById('dash-queue-table-body'), withStatus: true },
+                { el: document.getElementById('full-queue-table-body'), withStatus: false }
+            ];
+            targets.forEach(({ el, withStatus }) => {
+                if (!el) return;
+                el.replaceChildren();
+                escalationQueue.forEach(item => {
+                    const row = document.createElement('tr');
+                    const cell = (text, className) => {
+                        const td = document.createElement('td');
+                        td.className = 'p-3' + (className ? ' ' + className : '');
+                        td.textContent = text;
+                        return td;
+                    };
+                    row.append(cell(item.url, 'font-mono break-all'), cell(item.host));
+                    row.append(cell(item.tier, item.tierClass));
+                    if (withStatus) {
+                        const td = document.createElement('td');
+                        td.className = 'p-3';
+                        const badge = document.createElement('span');
+                        badge.className = `px-2 py-0.5 rounded-full border text-[10px] ${item.statusClass}`;
+                        badge.textContent = item.status;
+                        td.appendChild(badge);
+                        row.appendChild(td);
+                    }
+                    row.append(cell(item.timestamp, 'text-slate-400'));
+                    el.appendChild(row);
+                });
+            });
+            const badge = document.getElementById('queue-count-badge');
+            if (badge) badge.textContent = `${escalationQueue.length} Active`;
+        }
+
+        function triggerManualScan() {
+            const scans = document.getElementById('stat-scans');
+            if (scans) {
+                const current = parseInt(scans.textContent.replace(/,/g, ''), 10) || 0;
+                scans.textContent = (current + 1).toLocaleString('en-US');
+            }
+        }
+
         window.onload = function() {
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-            selectCategory('ecom');
-            updateSubcatOptions();
-            renderDashboardQueue();
-            if (window.location.hash.startsWith('#reset-password=')) {
-                pendingPasswordResetToken = window.location.hash.slice('#reset-password='.length);
-                if (pendingPasswordResetToken) {
-                    window.history.replaceState(null, '', window.location.pathname + window.location.search);
-                    toggleAuthModal(true, 'reset');
-                    showAuthStatus('Choose a new password to finish resetting your account.');
+            safeInit('icons', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+            safeInit('categories', () => selectCategory('ecom'));
+            safeInit('subcategories', updateSubcatOptions);
+            safeInit('queue', renderDashboardQueue);
+            safeInit('password reset link', () => {
+                if (window.location.hash.startsWith('#reset-password=')) {
+                    pendingPasswordResetToken = window.location.hash.slice('#reset-password='.length);
+                    if (pendingPasswordResetToken) {
+                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                        toggleAuthModal(true, 'reset');
+                        showAuthStatus('Choose a new password to finish resetting your account.');
+                    }
                 }
-            }
+            });
         };
 
         // NAVIGATION TAB SWITCHER
