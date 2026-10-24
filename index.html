@@ -287,6 +287,12 @@
   .ambient-orb { animation: none; }
 }
 .cat-tab:hover { box-shadow: 0 0 0 1px #a569bd, 0 6px 18px rgba(124,58,237,0.18); }
+/* Light mode: airy lavender surfaces */
+html.light [class~="bg-[#f5f3fa]"], html.light .bg-white, html.light .ag-info, html.light .ag-badge-card { background-color: #f7f5fb; }
+html.light header[class~="bg-[#f5f3fa]/90"] { background-color: rgba(247,245,251,.9); }
+html.light [class~="border-[#e2dcf2]"] { border-color: #d8cff8; }
+html.light .ag-info, html.light .ag-badge-card { border-color: #d8cff8; }
+html.light .ag-step-node { fill: #f7f5fb; }
 /* Lower-section tech mesh backgrounds */
 #explorer > div.rounded-2xl, #explorer .cat-tab, [id^="dash-sec-"] div.rounded-2xl {
   background-image: radial-gradient(var(--ag-dot) 1px, transparent 1.2px);
@@ -302,7 +308,7 @@ html.dark, html:not(.light) { --ag-dot: rgba(165,105,189,.22); --ag-line: rgba(0
 /* Light mode contrast */
 html.light #explorer .cat-tab:not(.border-cyber-cyan),
 html.light #explorer > div.rounded-2xl,
-html.light [id^="dash-sec-"] div.rounded-2xl { border-color: #b8a9fc; }
+html.light [id^="dash-sec-"] div.rounded-2xl { border-color: #d8cff8; }
 html.light #explorer .cat-tab:not(.border-cyber-cyan):hover { border-color: #7c3aed; }
 html.light #explorer .cat-tab h3,
 html.light [id^="dash-sec-"] h3 { color: #311060; }
