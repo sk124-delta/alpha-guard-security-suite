@@ -272,12 +272,32 @@
   pointer-events: none;
   animation: cyberScan 5s linear infinite;
 }
+@keyframes orbFloatA {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; }
+  50% { transform: translate(60px, 40px) scale(1.15); opacity: 0.3; }
+}
+@keyframes orbFloatB {
+  0%, 100% { transform: translate(0, 0) scale(1.1); opacity: 0.2; }
+  50% { transform: translate(-70px, -50px) scale(0.95); opacity: 0.3; }
+}
+.ambient-orb { will-change: transform, opacity; }
+.ambient-orb-a { animation: orbFloatA 18s ease-in-out infinite; }
+.ambient-orb-b { animation: orbFloatB 22s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ambient-orb { animation: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .cyber-scanner::after { animation: none; display: none; }
 }
 </style>
 </head>
 <body class="bg-[#f0eef6] dark:bg-[#100a1d] text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-300" id="appBody">
+
+    <!-- Ambient background orbs -->
+    <div class="ambient-orbs fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div class="ambient-orb ambient-orb-a absolute -top-32 -left-32 w-[32rem] h-[32rem] rounded-full bg-[#a569bd] blur-3xl opacity-20"></div>
+        <div class="ambient-orb ambient-orb-b absolute top-1/3 -right-40 w-[36rem] h-[36rem] rounded-full bg-[#06b6d4] blur-3xl opacity-20"></div>
+    </div>
 
     <!-- TOP NAVIGATION BAR -->
     <header class="sticky top-0 z-50 w-full border-b border-[#e2dcf2] dark:border-[#32214f] bg-[#f5f3fa]/90 dark:bg-[#19102d]/90 backdrop-blur-md transition-colors">
