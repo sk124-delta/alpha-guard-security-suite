@@ -306,6 +306,12 @@
 }
 .cat-tab:hover { box-shadow: 0 0 22px rgba(165,105,189,0.28), 0 0 12px rgba(0,240,255,0.18); }
 .cat-tab:hover::before { opacity: 1; animation-play-state: running; }
+/* SVG graphics */
+.ag-gfx { transition: transform .3s ease, opacity .3s ease; opacity: .9; }
+.cat-tab:hover .ag-gfx { transform: translateY(-1px); opacity: 1; }
+.ag-wave-line { stroke-dasharray: 60 40; animation: agWave 2.4s linear infinite; }
+@keyframes agWave { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .ag-wave-line { animation: none; stroke-dasharray: none; } }
 /* Status ticker */
 .ag-ticker { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.75rem; border-radius: 0.6rem;
   border: 1px solid rgba(165,105,189,0.25); background: linear-gradient(90deg, rgba(165,105,189,0.08), rgba(0,240,255,0.06));
@@ -451,6 +457,7 @@
                     <button onclick="selectCategory('ecom')" id="cat-btn-ecom" class="cat-tab p-4 rounded-xl border border-cyber-cyan bg-[#f5f3fa] dark:bg-slate-900 text-left transition-all shadow-sm dark:shadow-none">
                         <div class="flex items-center justify-between mb-2">
                             <i data-lucide="shopping-bag" class="w-6 h-6 text-cyber-cyan"></i>
+                            <svg class="ag-gfx flex-1 h-9 mx-2" viewBox="0 0 120 36" fill="none" aria-hidden="true"><path class="stroke-slate-400" d="M0 18h30M82 18h38M30 18l6-8h10M82 18l-6 8h-8" stroke-width="1" stroke-linecap="round" opacity=".6"/><circle class="text-purple-500 dark:text-cyan-400" cx="46" cy="10" r="1.8" fill="currentColor"/><g transform="translate(48 2)"><path class="stroke-slate-400" d="M12 1l10 3.5v8c0 6-4.2 10-10 12.5C6.2 22.5 2 18.5 2 12.5v-8z" stroke-width="1.4" stroke-linejoin="round"/><path class="text-purple-500 dark:text-cyan-400" d="M7 10h2l1.6 6h6.2l1.4-4.5H10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle class="text-cyan-400 dark:text-purple-500" cx="12" cy="19" r=".9" fill="currentColor"/><circle class="text-cyan-400 dark:text-purple-500" cx="16" cy="19" r=".9" fill="currentColor"/></g></svg>
                             <span class="text-xs font-mono px-2 py-0.5 rounded bg-cyber-cyan/20 text-cyber-cyan">Core Primary</span>
                         </div>
                         <h3 class="font-bold text-slate-900 dark:text-white text-sm">E-Commerce & Retail Brands</h3>
@@ -460,6 +467,7 @@
                     <button onclick="selectCategory('creator')" id="cat-btn-creator" class="cat-tab p-4 rounded-xl border border-[#e2dcf2] dark:border-[#32214f] bg-[#f5f3fa] dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
                         <div class="flex items-center justify-between mb-2">
                             <i data-lucide="video" class="w-6 h-6 text-indigo-400"></i>
+                            <svg class="ag-gfx flex-1 h-9 mx-2" viewBox="0 0 120 36" fill="none" aria-hidden="true"><path class="stroke-slate-400" d="M0 18h30M82 18h38M30 18l6 8h10M82 18l-6-8h-8" stroke-width="1" stroke-linecap="round" opacity=".6"/><circle class="text-purple-500 dark:text-cyan-400" cx="46" cy="26" r="1.8" fill="currentColor"/><g transform="translate(48 2)"><path class="stroke-slate-400" d="M12 1l10 3.5v8c0 6-4.2 10-10 12.5C6.2 22.5 2 18.5 2 12.5v-8z" stroke-width="1.4" stroke-linejoin="round"/><path class="text-purple-500 dark:text-cyan-400" d="M9.5 8.5v8l7-4z" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></g></svg>
                             <span class="text-xs font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400">Creator Media</span>
                         </div>
                         <h3 class="font-bold text-slate-900 dark:text-white text-sm">Creator Economy & Media</h3>
@@ -469,6 +477,7 @@
                     <button onclick="selectCategory('creative')" id="cat-btn-creative" class="cat-tab p-4 rounded-xl border border-[#e2dcf2] dark:border-[#32214f] bg-[#f5f3fa] dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
                         <div class="flex items-center justify-between mb-2">
                             <i data-lucide="code" class="w-6 h-6 text-emerald-400"></i>
+                            <svg class="ag-gfx flex-1 h-9 mx-2" viewBox="0 0 120 36" fill="none" aria-hidden="true"><path class="stroke-slate-400" d="M0 18h30M82 18h38M30 18l6-8h10M82 18l-6 8h-8" stroke-width="1" stroke-linecap="round" opacity=".6"/><circle class="text-purple-500 dark:text-cyan-400" cx="76" cy="26" r="1.8" fill="currentColor"/><g transform="translate(48 2)"><path class="stroke-slate-400" d="M12 1l10 3.5v8c0 6-4.2 10-10 12.5C6.2 22.5 2 18.5 2 12.5v-8z" stroke-width="1.4" stroke-linejoin="round"/><path class="text-purple-500 dark:text-cyan-400" d="M9.5 8.5L6.5 12.5l3 4M14.5 8.5l3 4-3 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
                             <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400">Digital Assets</span>
                         </div>
                         <h3 class="font-bold text-slate-900 dark:text-white text-sm">SaaS & Creative Professionals</h3>
@@ -478,6 +487,7 @@
                     <button onclick="selectCategory('specialized')" id="cat-btn-specialized" class="cat-tab p-4 rounded-xl border border-[#e2dcf2] dark:border-[#32214f] bg-[#f5f3fa] dark:bg-slate-900 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700 shadow-sm dark:shadow-none">
                         <div class="flex items-center justify-between mb-2">
                             <i data-lucide="shield-alert" class="w-6 h-6 text-amber-400"></i>
+                            <svg class="ag-gfx flex-1 h-9 mx-2" viewBox="0 0 120 36" fill="none" aria-hidden="true"><path class="stroke-slate-400" d="M0 18h30M82 18h38M30 18l6 8h10M82 18l-6-8h-8" stroke-width="1" stroke-linecap="round" opacity=".6"/><circle class="text-purple-500 dark:text-cyan-400" cx="76" cy="10" r="1.8" fill="currentColor"/><g transform="translate(48 2)"><path class="stroke-slate-400" d="M12 1l10 3.5v8c0 6-4.2 10-10 12.5C6.2 22.5 2 18.5 2 12.5v-8z" stroke-width="1.4" stroke-linejoin="round"/><path class="text-purple-500 dark:text-cyan-400" d="M5.5 12.5s2.5-4.5 6.5-4.5 6.5 4.5 6.5 4.5-2.5 4.5-6.5 4.5-6.5-4.5-6.5-4.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle class="text-cyan-400 dark:text-purple-500" cx="12" cy="12.5" r="1.8" fill="currentColor"/></g></svg>
                             <span class="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400">High Risk</span>
                         </div>
                         <h3 class="font-bold text-slate-900 dark:text-white text-sm">Specialized & VIP Protection</h3>
@@ -891,6 +901,7 @@
                 <button onclick="switchDashTab('overview')" id="dash-tab-overview" class="dash-nav pb-3 border-b-2 border-cyber-cyan text-cyber-cyan font-bold flex items-center space-x-2">
                     <i data-lucide="activity" class="w-4 h-4"></i>
                     <span>Overview & Metrics</span>
+                    <svg class="ag-wave w-14 h-4 ml-1 text-purple-500 dark:text-cyan-400" viewBox="0 0 56 16" fill="none" aria-hidden="true"><path class="stroke-slate-400" d="M0 8h56" stroke-width=".6" stroke-dasharray="2 3" opacity=".5"/><path class="ag-wave-line" d="M0 8h10l3-5 4 10 4-8 3 3h6l3-4 3 6 3-2h13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" pathLength="100"/></svg>
                 </button>
                 <button onclick="switchDashTab('queue')" id="dash-tab-queue" class="dash-nav pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
                     <i data-lucide="list-checks" class="w-4 h-4"></i>
