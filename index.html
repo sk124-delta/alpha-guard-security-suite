@@ -286,75 +286,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ambient-orb { animation: none; }
 }
-/* Metric stat pulse */
-@keyframes statPulse {
-  0%, 100% { text-shadow: 0 0 4px rgba(0,240,255,0.12), 0 0 10px rgba(165,105,189,0.08); }
-  50% { text-shadow: 0 0 10px rgba(0,240,255,0.55), 0 0 22px rgba(165,105,189,0.35); }
-}
-#dash-sec-overview .text-2xl { animation: statPulse 3.6s ease-in-out infinite; }
-/* Explorer card tracking border */
-@property --ag-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-@keyframes agBorderSpin { to { --ag-angle: 360deg; } }
-.cat-tab { position: relative; isolation: isolate; }
-.cat-tab::before {
-  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 2px;
-  background: conic-gradient(from var(--ag-angle), transparent 0%, #a569bd 20%, #00f0ff 45%, #a569bd 70%, transparent 100%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  opacity: 0; transition: opacity 0.35s ease; pointer-events: none; z-index: 1;
-  animation: agBorderSpin 3s linear infinite paused;
-}
-.cat-tab:hover { box-shadow: 0 0 22px rgba(165,105,189,0.28), 0 0 12px rgba(0,240,255,0.18); }
-.cat-tab:hover::before { opacity: 1; animation-play-state: running; }
-/* Right-margin telemetry rail */
-.ag-rail { display: none; position: fixed; top: 0; bottom: 0; width: 14px; right: calc((100vw - 80rem) / 4 - 7px);
-  pointer-events: none; z-index: 5; overflow: hidden; }
-@media (min-width: 1400px) { .ag-rail { display: block; } }
-.ag-rail-line { position: absolute; left: 50%; top: 8%; bottom: 8%; width: 1px; translate: -50% 0;
-  background: linear-gradient(to bottom, transparent, rgba(124,58,237,.28) 15%, rgba(124,58,237,.28) 85%, transparent);
-  -webkit-mask: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent); mask: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent); }
-.ag-rail-pulse { position: absolute; left: 50%; width: 3px; height: 140px; translate: -50% 0; border-radius: 9999px; top: 0;
-  background: linear-gradient(to bottom, transparent, #a569bd, #06b6d4, transparent); opacity: .55;
-  animation: agRailMove 9s linear infinite; }
-@keyframes agRailMove { from { transform: translateY(-160px); } to { transform: translateY(100vh); } }
-.ag-rail-node { position: absolute; left: 50%; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 9999px;
-  background: #7c3aed; opacity: .45; animation: agRailNode 3.6s ease-in-out infinite; }
-.ag-rail-node:nth-child(odd) { background: #a569bd; }
-.ag-rail-node:nth-child(3n) { background: #06b6d4; }
-@keyframes agRailNode { 0%, 100% { transform: scale(.7); opacity: .3; box-shadow: 0 0 0 0 rgba(124,58,237,0); }
-  50% { transform: scale(1.1); opacity: .75; box-shadow: 0 0 0 5px rgba(124,58,237,.08); } }
-html.dark .ag-rail-line { background: linear-gradient(to bottom, transparent, rgba(165,105,189,.4) 15%, rgba(6,182,212,.4) 85%, transparent); }
-html.dark .ag-rail-pulse { opacity: .8; box-shadow: 0 0 12px rgba(6,182,212,.6); }
-html.dark .ag-rail-node { filter: drop-shadow(0 0 4px rgba(6,182,212,.8)); }
-@media (prefers-reduced-motion: reduce) { .ag-rail-pulse, .ag-rail-node { animation: none; } .ag-rail-pulse { display: none; } }
-/* Cryptographic hash stream */
-.ag-hash { position: absolute; inset: 0; margin: 0 !important; overflow: hidden; pointer-events: none; z-index: 0;
-  -webkit-mask: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent); mask: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent); }
-.ag-hash-col { position: absolute; top: 0; font: 10px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; user-select: none;
-  color: #4c1d95; animation: agHashScroll var(--ag-hd, 40s) linear infinite; animation-delay: var(--ag-hdl, 0s); }
-.ag-hash-col.up { animation-direction: reverse; }
-html.dark .ag-hash { opacity: .15; }
-.ag-hash-col b { font-weight: 600; color: #7c3aed; }
-html.dark .ag-hash-col { color: #a569bd; text-shadow: 0 0 6px rgba(165,105,189,.5); }
-html.dark .ag-hash-col b { color: #06b6d4; text-shadow: 0 0 6px rgba(6,182,212,.6); }
-@keyframes agHashScroll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
-@media (prefers-reduced-motion: reduce) { .ag-hash-col { animation: none; } }
-/* Floating background security vectors */
-#explorer, #dash-sec-overview { position: relative; }
-.ag-bgfx { position: absolute; inset: 0; margin: 0 !important; pointer-events: none; z-index: 0; }
-#explorer > :not(.ag-bgfx):not(.ag-hash), #dash-sec-overview > :not(.ag-bgfx):not(.ag-hash) { position: relative; z-index: 1; }
-.ag-bgfx-item { position: absolute; translate: 0 calc(var(--ag-sy, 0) * var(--ag-k, 0.05) * 1px); will-change: translate; }
-.ag-bgfx-item svg { width: 100%; height: 100%; fill: none; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round;
-  animation: agFloat var(--ag-d, 20s) ease-in-out infinite; animation-delay: var(--ag-delay, 0s); }
-.ag-bgfx-item svg.ag-s-cyan { stroke: #7c3aed; }
-html.dark .ag-bgfx-item svg { stroke: #a569bd; filter: drop-shadow(0 0 4px rgba(165,105,189,.6)); }
-html.dark .ag-bgfx-item svg.ag-s-cyan { stroke: #06b6d4; filter: drop-shadow(0 0 4px rgba(6,182,212,.6)); }
-@keyframes agFloat {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  33% { transform: translate(14px, -22px) rotate(4deg); }
-  66% { transform: translate(-12px, -10px) rotate(-3deg); }
-}
-@media (prefers-reduced-motion: reduce) { .ag-bgfx-item svg { animation: none; } .ag-bgfx-item { translate: none; } }
+.cat-tab:hover { box-shadow: 0 0 0 1px #a569bd, 0 6px 18px rgba(124,58,237,0.18); }
 /* Lower-section tech mesh backgrounds */
 #explorer > div.rounded-2xl, #explorer .cat-tab, [id^="dash-sec-"] div.rounded-2xl {
   background-image: radial-gradient(var(--ag-dot) 1px, transparent 1.2px);
@@ -381,50 +313,35 @@ html.light .ag-gfx .text-purple-500, html.light .ag-wave.text-purple-500 { color
 html.light .ag-gfx .dark\:text-purple-500, html.light .ag-gfx .text-cyan-400 { color: #7c3aed; }
 html.light .ag-gfx .dark\:text-cyan-400 { color: #311060; }
 html.light .ag-wave { color: #7c3aed; }
-html.light .ag-ticker { border-color: #b8a9fc; background: linear-gradient(90deg, rgba(124,58,237,.08), rgba(124,58,237,.03)); }
-html.light .ag-ticker .text-cyber-cyan { color: #311060; }
-html.light .ag-ticker-text { color: #311060; }
-html.light .ag-ticker-dot { background: #7c3aed; }
 /* Dark mode luminous highlights */
 html.dark .ag-gfx .stroke-slate-400, html.dark .ag-wave .stroke-slate-400 { stroke: #a569bd; }
 html.dark .ag-gfx .dark\:text-cyan-400, html.dark .ag-wave.dark\:text-cyan-400 { color: #00f0ff; }
 html.dark .ag-gfx .dark\:text-purple-500 { color: #c58fe0; }
 html.dark .ag-gfx, html.dark .ag-wave { filter: drop-shadow(0 0 4px rgba(0,240,255,.55)) drop-shadow(0 0 8px rgba(165,105,189,.35)); }
-html.dark .ag-ticker-dot { box-shadow: 0 0 8px #00f0ff; }
 /* SVG graphics */
-.ag-gfx { transition: transform .3s ease, opacity .3s ease; opacity: .9; }
-.cat-tab:hover .ag-gfx { transform: translateY(-1px); opacity: 1; }
-.ag-wave-line { stroke-dasharray: 60 40; animation: agWave 2.4s linear infinite; }
-@keyframes agWave { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
-@media (prefers-reduced-motion: reduce) { .ag-wave-line { animation: none; stroke-dasharray: none; } }
-/* Status ticker */
-.ag-ticker { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.75rem; border-radius: 0.6rem;
-  border: 1px solid rgba(165,105,189,0.25); background: linear-gradient(90deg, rgba(165,105,189,0.08), rgba(0,240,255,0.06));
-  font-family: ui-monospace, monospace; font-size: 11px; overflow: hidden; }
-.ag-ticker-dot { width: 7px; height: 7px; border-radius: 9999px; background: #00f0ff; flex: none; animation: agDot 1.8s ease-in-out infinite; }
-@keyframes agDot { 0%,100% { box-shadow: 0 0 0 0 rgba(0,240,255,0.5); } 50% { box-shadow: 0 0 0 5px rgba(0,240,255,0); } }
-.ag-ticker-text { transition: opacity 0.5s ease, transform 0.5s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ag-ticker-text.out { opacity: 0; transform: translateY(6px); }
-@media (prefers-reduced-motion: reduce) {
-  #dash-sec-overview .text-2xl, .ag-ticker-dot { animation: none; }
-  .cat-tab::before { animation: none; }
-}
+.ag-gfx { opacity: .95; }
+/* Static infographics */
+.ag-info { border: 1.5px solid #b8a9fc; background: #ffffff; border-radius: 1rem; }
+html.dark .ag-info { border-color: #6b3fa0; background: #150d26; }
+.ag-info .ag-step-node { fill: #ffffff; stroke: #7c3aed; stroke-width: 2; }
+html.dark .ag-info .ag-step-node { fill: #1d1235; stroke: #c58fe0; }
+.ag-info .ag-step-line { stroke: #7c3aed; stroke-width: 2; }
+html.dark .ag-info .ag-step-line { stroke: #a569bd; }
+.ag-info .ag-step-ico { stroke: #6d28d9; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+html.dark .ag-info .ag-step-ico { stroke: #c58fe0; }
+.ag-info .ag-step-accent { fill: #06b6d4; }
+.ag-info .ag-step-title { font-weight: 700; color: #311060; }
+html.dark .ag-info .ag-step-title { color: #ffffff; }
+.ag-info .ag-step-sub { color: #475569; }
+html.dark .ag-info .ag-step-sub { color: #cbd5e1; }
+.ag-badge-card { border: 1.5px solid #b8a9fc; background: #ffffff; border-radius: .9rem; }
+html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
 @media (prefers-reduced-motion: reduce) {
   .cyber-scanner::after { animation: none; display: none; }
 }
 </style>
 </head>
 <body class="bg-[#f0eef6] dark:bg-[#100a1d] text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-300" id="appBody">
-    <div class="ag-rail" aria-hidden="true">
-        <div class="ag-rail-line"></div>
-        <div class="ag-rail-pulse"></div>
-        <span class="ag-rail-node" style="top:16%;animation-delay:0s"></span>
-        <span class="ag-rail-node" style="top:28%;animation-delay:-.9s"></span>
-        <span class="ag-rail-node" style="top:41%;animation-delay:-1.8s"></span>
-        <span class="ag-rail-node" style="top:55%;animation-delay:-2.7s"></span>
-        <span class="ag-rail-node" style="top:68%;animation-delay:-1.2s"></span>
-        <span class="ag-rail-node" style="top:81%;animation-delay:-2.1s"></span>
-    </div>
 
     <!-- Ambient background orbs -->
     <div class="ambient-orbs fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
@@ -588,6 +505,68 @@ html.dark .ag-ticker-dot { box-shadow: 0 0 8px #00f0ff; }
                         <h3 class="font-bold text-slate-900 dark:text-white text-sm">Specialized & VIP Protection</h3>
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Real Estate Scams, Web3 Phishing & Executive Brand</p>
                     </button>
+                </div>
+
+                <!-- Protection Flowchart & Trust Badges -->
+                <div class="ag-info p-5 sm:p-6 space-y-6">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <h3 class="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+                            How Alpha Guard Protects Your Brand
+                        </h3>
+                        <span class="text-[11px] font-mono font-semibold text-purple-600 dark:text-purple-400 border border-purple-600/40 dark:border-purple-400/40 rounded px-2 py-0.5">4-STEP AUTOMATED PIPELINE</span>
+                    </div>
+                    <ol class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-0">
+                        <li class="relative flex lg:flex-col items-center lg:text-center gap-3 lg:px-3">
+                            <div class="relative shrink-0 w-14 h-14 rounded-full border-2 border-purple-600 dark:border-purple-400 bg-white dark:bg-[#1d1235] flex items-center justify-center">
+                                <svg class="w-7 h-7 ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></svg>
+                                <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-400 text-white dark:text-slate-950 text-[10px] font-bold flex items-center justify-center">1</span>
+                            </div>
+                            <div><div class="ag-step-title text-sm">Scan</div><div class="ag-step-sub text-xs">Crawl marketplaces, search &amp; social 24/7</div></div>
+                            <span class="hidden lg:block absolute top-7 left-[calc(50%+2.25rem)] right-[calc(-50%+2.25rem)] border-t-2 border-dashed border-purple-600 dark:border-purple-400"></span>
+                        </li>
+                        <li class="relative flex lg:flex-col items-center lg:text-center gap-3 lg:px-3">
+                            <div class="relative shrink-0 w-14 h-14 rounded-full border-2 border-purple-600 dark:border-purple-400 bg-white dark:bg-[#1d1235] flex items-center justify-center">
+                                <svg class="w-7 h-7 ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.01"/></svg>
+                                <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-400 text-white dark:text-slate-950 text-[10px] font-bold flex items-center justify-center">2</span>
+                            </div>
+                            <div><div class="ag-step-title text-sm">Detect</div><div class="ag-step-sub text-xs">Match fingerprints to flag infringements</div></div>
+                            <span class="hidden lg:block absolute top-7 left-[calc(50%+2.25rem)] right-[calc(-50%+2.25rem)] border-t-2 border-dashed border-purple-600 dark:border-purple-400"></span>
+                        </li>
+                        <li class="relative flex lg:flex-col items-center lg:text-center gap-3 lg:px-3">
+                            <div class="relative shrink-0 w-14 h-14 rounded-full border-2 border-purple-600 dark:border-purple-400 bg-white dark:bg-[#1d1235] flex items-center justify-center">
+                                <svg class="w-7 h-7 ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+                                <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-400 text-white dark:text-slate-950 text-[10px] font-bold flex items-center justify-center">3</span>
+                            </div>
+                            <div><div class="ag-step-title text-sm">Verify</div><div class="ag-step-sub text-xs">Evidence hashed &amp; ownership confirmed</div></div>
+                            <span class="hidden lg:block absolute top-7 left-[calc(50%+2.25rem)] right-[calc(-50%+2.25rem)] border-t-2 border-dashed border-purple-600 dark:border-purple-400"></span>
+                        </li>
+                        <li class="relative flex lg:flex-col items-center lg:text-center gap-3 lg:px-3">
+                            <div class="relative shrink-0 w-14 h-14 rounded-full border-2 border-purple-600 dark:border-purple-400 bg-white dark:bg-[#1d1235] flex items-center justify-center">
+                                <svg class="w-7 h-7 ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
+                                <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-400 text-white dark:text-slate-950 text-[10px] font-bold flex items-center justify-center">4</span>
+                            </div>
+                            <div><div class="ag-step-title text-sm">Takedown</div><div class="ag-step-sub text-xs">DMCA notices &amp; SERP de-indexing sent</div></div>
+                        </li>
+                    </ol>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-5 border-t border-[#b8a9fc] dark:border-[#32214f]">
+                        <div class="ag-badge-card p-3 flex items-center gap-3">
+                            <svg class="w-9 h-9 shrink-0 text-purple-600 dark:text-purple-400" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 3l14 5v10c0 9-6 16-14 19C12 34 6 27 6 18V8z"/><path d="M13.5 20l4.5 4.5 9-9"/></svg>
+                            <div class="leading-tight"><div class="ag-step-title text-xs">DMCA Compliant</div><div class="ag-step-sub text-[11px]">Legally valid notices</div></div>
+                        </div>
+                        <div class="ag-badge-card p-3 flex items-center gap-3">
+                            <svg class="w-9 h-9 shrink-0 text-purple-600 dark:text-purple-400" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="18" width="24" height="17" rx="3"/><path d="M13 18v-5a7 7 0 0114 0v5"/><circle cx="20" cy="26.5" r="2.5"/></svg>
+                            <div class="leading-tight"><div class="ag-step-title text-xs">256-bit Encryption</div><div class="ag-step-sub text-[11px]">Data secured at rest</div></div>
+                        </div>
+                        <div class="ag-badge-card p-3 flex items-center gap-3">
+                            <svg class="w-9 h-9 shrink-0 text-purple-600 dark:text-purple-400" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="20" cy="20" r="15"/><path d="M20 10v10l7 4"/></svg>
+                            <div class="leading-tight"><div class="ag-step-title text-xs">24/7 Monitoring</div><div class="ag-step-sub text-[11px]">Always-on crawlers</div></div>
+                        </div>
+                        <div class="ag-badge-card p-3 flex items-center gap-3">
+                            <svg class="w-9 h-9 shrink-0 text-purple-600 dark:text-purple-400" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4l5 5h7v7l5 4-5 4v7h-7l-5 5-5-5H8v-7l-5-4 5-4V9h7z"/><path d="M14 20l4 4 8-8"/></svg>
+                            <div class="leading-tight"><div class="ag-step-title text-xs">Verified Evidence</div><div class="ag-step-sub text-[11px]">Tamper-proof hash logs</div></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Sub-category Listing Panel -->
@@ -1063,13 +1042,29 @@ html.dark .ag-ticker-dot { box-shadow: 0 0 8px #00f0ff; }
                     </div>
                 </div>
 
+                <!-- Protection Coverage Infographic -->
+                <div class="ag-info p-5 sm:p-6 flex flex-col md:flex-row items-center gap-6">
+                    <div class="shrink-0 flex flex-col items-center text-center gap-2">
+                        <svg class="w-24 h-24 text-purple-600 dark:text-purple-400" viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M48 6l34 12v24c0 22-14 38-34 46C28 80 14 64 14 42V18z"/>
+                            <path d="M48 16l24 8.5v17.5c0 15.500-9.500 27-24 33-14.500-6-24-17.500-24-33V24.500z" stroke-width="1.5" opacity=".55"/>
+                            <path d="M35 47l9 9 17-19" stroke-width="4"/>
+                        </svg>
+                        <span class="text-[11px] font-mono font-bold text-purple-600 dark:text-purple-400 tracking-wide">PROTECTION ACTIVE</span>
+                    </div>
+                    <div class="flex-1 w-full">
+                        <h3 class="font-bold text-slate-900 dark:text-white text-sm mb-4">Enforcement Lifecycle</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                            <div class="ag-badge-card p-3"><svg class="w-6 h-6 mx-auto ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></svg><div class="ag-step-title text-xs mt-2">Discovered</div><div class="ag-step-sub text-[11px]">Automated scans</div></div>
+                            <div class="ag-badge-card p-3"><svg class="w-6 h-6 mx-auto ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.01"/></svg><div class="ag-step-title text-xs mt-2">Flagged</div><div class="ag-step-sub text-[11px]">Verified threats</div></div>
+                            <div class="ag-badge-card p-3"><svg class="w-6 h-6 mx-auto ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg><div class="ag-step-title text-xs mt-2">Notified</div><div class="ag-step-sub text-[11px]">DMCA dispatched</div></div>
+                            <div class="ag-badge-card p-3"><svg class="w-6 h-6 mx-auto ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.500l3 3 5-6"/></svg><div class="ag-step-title text-xs mt-2">Removed</div><div class="ag-step-sub text-[11px]">Content taken down</div></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Live Pipeline Quick Preview -->
                 <div class="p-6 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f] space-y-4">
-                    <div class="ag-ticker" role="status" aria-live="off">
-                        <span class="ag-ticker-dot"></span>
-                        <span class="text-cyber-cyan font-semibold">LIVE</span>
-                        <span id="agTickerText" class="ag-ticker-text text-slate-400">Perimeter scan nominal — all monitored sites healthy</span>
-                    </div>
                     <div class="flex items-center justify-between">
                         <h3 class="font-bold text-white light:text-slate-900 flex items-center space-x-2 text-sm">
                             <i data-lucide="shield-ellipsis" class="w-4 h-4 text-cyber-cyan"></i>
@@ -1730,93 +1725,6 @@ html.dark .ag-ticker-dot { box-shadow: 0 0 8px #00f0ff; }
                 toggleAuthModal(false);
             }
         });
-
-        // CRYPTOGRAPHIC HASH STREAM
-        (function () {
-            const hex = n => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-            const tags = ['hash_verify', 'takedown_active', 'sha256'];
-            const line = () => {
-                const r = Math.random();
-                if (r < 0.2) return `<b>hash_verify</b> ${hex(6)}`;
-                if (r < 0.35) return `<b>takedown_active</b>`;
-                if (r < 0.5) return `<b>sha256</b>:${hex(8)}`;
-                return hex(16);
-            };
-            const column = i => {
-                const lines = Array.from({ length: 36 }, line).join('\n');
-                const dir = i % 2 ? ' up' : '';
-                return `<div class="ag-hash-col${dir}" style="left:${(i * 12.5 + 1).toFixed(1)}%;--ag-hd:${34 + (i * 7) % 22}s;--ag-hdl:${-i * 3}s">${lines}\n${lines}</div>`;
-            };
-            const cols = Array.from({ length: 8 }, (_, i) => column(i)).join('');
-            ['explorer', 'dash-sec-overview'].forEach(id => {
-                const host = document.getElementById(id);
-                if (!host) return;
-                const layer = document.createElement('div');
-                layer.className = 'ag-hash opacity-10 dark:opacity-15';
-                layer.setAttribute('aria-hidden', 'true');
-                layer.innerHTML = cols;
-                host.appendChild(layer);
-            });
-        })();
-
-        // FLOATING BACKGROUND SECURITY VECTORS
-        (function () {
-            const shapes = {
-                shield: '<path d="M32 4l24 8v18c0 16-10 27-24 32C18 57 8 46 8 30V12z"/><path d="M32 16v36M18 24c8 2 14 2 14-4M46 24c-8 2-14 2-14-4" opacity=".6"/>',
-                lock: '<rect x="12" y="28" width="40" height="30" rx="5"/><path d="M20 28V20a12 12 0 0124 0v8"/><circle cx="32" cy="42" r="4"/><path d="M32 46v6"/>',
-                nodes: '<circle cx="12" cy="14" r="5"/><circle cx="52" cy="12" r="4"/><circle cx="32" cy="34" r="6"/><circle cx="12" cy="52" r="4"/><circle cx="52" cy="50" r="5"/><path d="M16 17l12 13M48 15L36 30M16 49l12-11M48 47L36 38M17 14h30"/>'
-            };
-            // [shape, left%, top%, size px, duration s, delay s, parallax k, cyan]
-            const layout = [
-                ['shield', 3, 4, 110, 22, 0, 0.06, 0], ['nodes', 86, 8, 120, 26, -6, 0.04, 1],
-                ['lock', 90, 40, 90, 20, -3, 0.07, 0], ['nodes', 2, 48, 100, 24, -10, 0.05, 1],
-                ['shield', 84, 74, 100, 28, -8, 0.03, 1], ['lock', 5, 82, 85, 21, -12, 0.06, 0]
-            ];
-            const html = layout.map(([s, l, t, sz, d, dl, k, c]) =>
-                `<div class="ag-bgfx-item opacity-10 dark:opacity-[0.15]" style="left:${l}%;top:${t}%;width:${sz}px;height:${sz}px;--ag-k:${k}">` +
-                `<svg viewBox="0 0 64 64" class="stroke-[#7c3aed] dark:stroke-[#a569bd] ${c ? 'ag-s-cyan' : ''}" style="--ag-d:${d}s;--ag-delay:${dl}s">${shapes[s]}</svg></div>`
-            ).join('');
-            ['explorer', 'dash-sec-overview'].forEach(id => {
-                const host = document.getElementById(id);
-                if (!host) return;
-                const layer = document.createElement('div');
-                layer.className = 'ag-bgfx';
-                layer.setAttribute('aria-hidden', 'true');
-                layer.innerHTML = html;
-                host.appendChild(layer);
-            });
-            let ticking = false;
-            window.addEventListener('scroll', () => {
-                if (ticking) return;
-                ticking = true;
-                requestAnimationFrame(() => {
-                    document.documentElement.style.setProperty('--ag-sy', window.scrollY);
-                    ticking = false;
-                });
-            }, { passive: true });
-        })();
-
-        // LIVE STATUS TICKER
-        (function () {
-            const el = document.getElementById('agTickerText');
-            if (!el) return;
-            const msgs = [
-                'Perimeter scan nominal — all monitored sites healthy',
-                'Crawler sweep complete — 120 new URLs indexed in the last hour',
-                'Takedown pipeline healthy — DMCA dispatch queue responding',
-                'Webhook heartbeat verified — 100% delivery on synced sites',
-                'Threat signatures refreshed — detection models up to date'
-            ];
-            let i = 0;
-            setInterval(() => {
-                el.classList.add('out');
-                setTimeout(() => {
-                    i = (i + 1) % msgs.length;
-                    el.textContent = msgs[i];
-                    el.classList.remove('out');
-                }, 500);
-            }, 4500);
-        })();
 
         // INDUSTRY CATEGORY SELECTION IN EXPLORER
         function selectCategory(catKey) {
