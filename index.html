@@ -327,10 +327,22 @@ html.dark .ag-rail-line { background: linear-gradient(to bottom, transparent, rg
 html.dark .ag-rail-pulse { opacity: .8; box-shadow: 0 0 12px rgba(6,182,212,.6); }
 html.dark .ag-rail-node { filter: drop-shadow(0 0 4px rgba(6,182,212,.8)); }
 @media (prefers-reduced-motion: reduce) { .ag-rail-pulse, .ag-rail-node { animation: none; } .ag-rail-pulse { display: none; } }
+/* Cryptographic hash stream */
+.ag-hash { position: absolute; inset: 0; margin: 0 !important; overflow: hidden; pointer-events: none; z-index: 0;
+  -webkit-mask: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent); mask: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent); }
+.ag-hash-col { position: absolute; top: 0; font: 10px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; user-select: none;
+  color: #4c1d95; animation: agHashScroll var(--ag-hd, 40s) linear infinite; animation-delay: var(--ag-hdl, 0s); }
+.ag-hash-col.up { animation-direction: reverse; }
+html.dark .ag-hash { opacity: .15; }
+.ag-hash-col b { font-weight: 600; color: #7c3aed; }
+html.dark .ag-hash-col { color: #a569bd; text-shadow: 0 0 6px rgba(165,105,189,.5); }
+html.dark .ag-hash-col b { color: #06b6d4; text-shadow: 0 0 6px rgba(6,182,212,.6); }
+@keyframes agHashScroll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+@media (prefers-reduced-motion: reduce) { .ag-hash-col { animation: none; } }
 /* Floating background security vectors */
 #explorer, #dash-sec-overview { position: relative; }
 .ag-bgfx { position: absolute; inset: 0; margin: 0 !important; pointer-events: none; z-index: 0; }
-#explorer > :not(.ag-bgfx), #dash-sec-overview > :not(.ag-bgfx) { position: relative; z-index: 1; }
+#explorer > :not(.ag-bgfx):not(.ag-hash), #dash-sec-overview > :not(.ag-bgfx):not(.ag-hash) { position: relative; z-index: 1; }
 .ag-bgfx-item { position: absolute; translate: 0 calc(var(--ag-sy, 0) * var(--ag-k, 0.05) * 1px); will-change: translate; }
 .ag-bgfx-item svg { width: 100%; height: 100%; fill: none; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round;
   animation: agFloat var(--ag-d, 20s) ease-in-out infinite; animation-delay: var(--ag-delay, 0s); }
@@ -1718,6 +1730,34 @@ html.dark .ag-ticker-dot { box-shadow: 0 0 8px #00f0ff; }
                 toggleAuthModal(false);
             }
         });
+
+        // CRYPTOGRAPHIC HASH STREAM
+        (function () {
+            const hex = n => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+            const tags = ['hash_verify', 'takedown_active', 'sha256'];
+            const line = () => {
+                const r = Math.random();
+                if (r < 0.2) return `<b>hash_verify</b> ${hex(6)}`;
+                if (r < 0.35) return `<b>takedown_active</b>`;
+                if (r < 0.5) return `<b>sha256</b>:${hex(8)}`;
+                return hex(16);
+            };
+            const column = i => {
+                const lines = Array.from({ length: 36 }, line).join('\n');
+                const dir = i % 2 ? ' up' : '';
+                return `<div class="ag-hash-col${dir}" style="left:${(i * 12.5 + 1).toFixed(1)}%;--ag-hd:${34 + (i * 7) % 22}s;--ag-hdl:${-i * 3}s">${lines}\n${lines}</div>`;
+            };
+            const cols = Array.from({ length: 8 }, (_, i) => column(i)).join('');
+            ['explorer', 'dash-sec-overview'].forEach(id => {
+                const host = document.getElementById(id);
+                if (!host) return;
+                const layer = document.createElement('div');
+                layer.className = 'ag-hash opacity-10 dark:opacity-15';
+                layer.setAttribute('aria-hidden', 'true');
+                layer.innerHTML = cols;
+                host.appendChild(layer);
+            });
+        })();
 
         // FLOATING BACKGROUND SECURITY VECTORS
         (function () {
