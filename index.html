@@ -306,6 +306,22 @@
 }
 .cat-tab:hover { box-shadow: 0 0 22px rgba(165,105,189,0.28), 0 0 12px rgba(0,240,255,0.18); }
 .cat-tab:hover::before { opacity: 1; animation-play-state: running; }
+/* Floating background security vectors */
+#explorer, #dash-sec-overview { position: relative; }
+.ag-bgfx { position: absolute; inset: 0; margin: 0 !important; pointer-events: none; z-index: 0; }
+#explorer > :not(.ag-bgfx), #dash-sec-overview > :not(.ag-bgfx) { position: relative; z-index: 1; }
+.ag-bgfx-item { position: absolute; translate: 0 calc(var(--ag-sy, 0) * var(--ag-k, 0.05) * 1px); will-change: translate; }
+.ag-bgfx-item svg { width: 100%; height: 100%; fill: none; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round;
+  animation: agFloat var(--ag-d, 20s) ease-in-out infinite; animation-delay: var(--ag-delay, 0s); }
+.ag-bgfx-item svg.ag-s-cyan { stroke: #7c3aed; }
+html.dark .ag-bgfx-item svg { stroke: #a569bd; filter: drop-shadow(0 0 4px rgba(165,105,189,.6)); }
+html.dark .ag-bgfx-item svg.ag-s-cyan { stroke: #06b6d4; filter: drop-shadow(0 0 4px rgba(6,182,212,.6)); }
+@keyframes agFloat {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(14px, -22px) rotate(4deg); }
+  66% { transform: translate(-12px, -10px) rotate(-3deg); }
+}
+@media (prefers-reduced-motion: reduce) { .ag-bgfx-item svg { animation: none; } .ag-bgfx-item { translate: none; } }
 /* Lower-section tech mesh backgrounds */
 #explorer > div.rounded-2xl, #explorer .cat-tab, [id^="dash-sec-"] div.rounded-2xl {
   background-image: radial-gradient(var(--ag-dot) 1px, transparent 1.2px);
@@ -1671,6 +1687,43 @@ html.dark .ag-ticker-dot { box-shadow: 0 0 8px #00f0ff; }
                 toggleAuthModal(false);
             }
         });
+
+        // FLOATING BACKGROUND SECURITY VECTORS
+        (function () {
+            const shapes = {
+                shield: '<path d="M32 4l24 8v18c0 16-10 27-24 32C18 57 8 46 8 30V12z"/><path d="M32 16v36M18 24c8 2 14 2 14-4M46 24c-8 2-14 2-14-4" opacity=".6"/>',
+                lock: '<rect x="12" y="28" width="40" height="30" rx="5"/><path d="M20 28V20a12 12 0 0124 0v8"/><circle cx="32" cy="42" r="4"/><path d="M32 46v6"/>',
+                nodes: '<circle cx="12" cy="14" r="5"/><circle cx="52" cy="12" r="4"/><circle cx="32" cy="34" r="6"/><circle cx="12" cy="52" r="4"/><circle cx="52" cy="50" r="5"/><path d="M16 17l12 13M48 15L36 30M16 49l12-11M48 47L36 38M17 14h30"/>'
+            };
+            // [shape, left%, top%, size px, duration s, delay s, parallax k, cyan]
+            const layout = [
+                ['shield', 3, 4, 110, 22, 0, 0.06, 0], ['nodes', 86, 8, 120, 26, -6, 0.04, 1],
+                ['lock', 90, 40, 90, 20, -3, 0.07, 0], ['nodes', 2, 48, 100, 24, -10, 0.05, 1],
+                ['shield', 84, 74, 100, 28, -8, 0.03, 1], ['lock', 5, 82, 85, 21, -12, 0.06, 0]
+            ];
+            const html = layout.map(([s, l, t, sz, d, dl, k, c]) =>
+                `<div class="ag-bgfx-item opacity-10 dark:opacity-[0.15]" style="left:${l}%;top:${t}%;width:${sz}px;height:${sz}px;--ag-k:${k}">` +
+                `<svg viewBox="0 0 64 64" class="stroke-[#7c3aed] dark:stroke-[#a569bd] ${c ? 'ag-s-cyan' : ''}" style="--ag-d:${d}s;--ag-delay:${dl}s">${shapes[s]}</svg></div>`
+            ).join('');
+            ['explorer', 'dash-sec-overview'].forEach(id => {
+                const host = document.getElementById(id);
+                if (!host) return;
+                const layer = document.createElement('div');
+                layer.className = 'ag-bgfx';
+                layer.setAttribute('aria-hidden', 'true');
+                layer.innerHTML = html;
+                host.appendChild(layer);
+            });
+            let ticking = false;
+            window.addEventListener('scroll', () => {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(() => {
+                    document.documentElement.style.setProperty('--ag-sy', window.scrollY);
+                    ticking = false;
+                });
+            }, { passive: true });
+        })();
 
         // LIVE STATUS TICKER
         (function () {
