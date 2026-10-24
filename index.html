@@ -22,6 +22,7 @@
             theme: {
                 extend: {
                     colors: {
+                        slate: { 900: '#111827' },
                         cyber: {
                             navy: '#0a0f1d',
                             darknavy: '#0b132b',
@@ -196,7 +197,21 @@
         }
 
         /* Headings and body copy defaults (utility classes still win in dark mode) */
-        html.light h1, html.light h2, html.light h3 { color: #0f172a; }
+        :where(html.light) :is(h1, h2, h3, h4) { color: #0f172a; }
+        :where(html.dark) :is(h1, h2, h3, h4) { color: #ffffff; }
+
+        /* Light-mode CTAs: sky-600 solid with white text (hover sky-700) */
+        html.light .card-btn,
+        html.light .auth-submit-button {
+            background-color: #0284c7 !important;
+            color: #ffffff !important;
+            font-weight: 700;
+            box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.25);
+        }
+        html.light .card-btn:hover,
+        html.light .auth-submit-button:hover {
+            background-color: #0369a1 !important;
+        }
         html.light main p:not([class*="text-"]) { color: #475569; }
         html.dark main p:not([class*="text-"]) { color: #cbd5e1; }
 
