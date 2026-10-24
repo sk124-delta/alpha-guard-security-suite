@@ -8,7 +8,7 @@
     <script>
         (function () {
             let mode = null;
-            try { mode = localStorage.getItem('ag_theme'); } catch (e) { /* storage unavailable */ }
+            try { mode = localStorage.getItem('theme') || localStorage.getItem('ag_theme'); } catch (e) { /* storage unavailable */ }
             if (mode !== 'light' && mode !== 'dark') {
                 mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
             }
@@ -297,7 +297,7 @@
             <!-- Actions & Theme Toggle -->
             <div class="flex items-center space-x-3">
                 <!-- Theme Switcher Button -->
-                <button onclick="toggleTheme()" class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-cyber-cyan transition-all light:bg-slate-100 light:border-slate-300 light:text-slate-700" title="Toggle Light/Dark Theme">
+                <button type="button" id="theme-toggle" class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-cyber-cyan transition-all light:bg-slate-100 light:border-slate-300 light:text-slate-700" title="Toggle Light/Dark Theme">
                     <i data-lucide="sun" id="themeIconSun" class="w-4 h-4 hidden"></i>
                     <i data-lucide="moon" id="themeIconMoon" class="w-4 h-4"></i>
                 </button>
@@ -1404,7 +1404,7 @@
 
         window.onload = function() {
             safeInit('icons', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
-            safeInit('theme icons', () => setThemeMode(document.documentElement.classList.contains('light') ? 'light' : 'dark'));
+            safeInit('theme icons', () => setThemeMode(document.documentElement.classList.contains('light') ? 'light' : 'dark', false));
             safeInit('categories', () => selectCategory('ecom'));
             safeInit('subcategories', updateSubcatOptions);
             safeInit('queue', renderDashboardQueue);
@@ -1787,11 +1787,13 @@
             setThemeMode(html.classList.contains('dark') ? 'light' : 'dark');
         }
 
-        function setThemeMode(mode) {
+        function setThemeMode(mode, persist = true) {
             const html = document.documentElement;
             const sunIcon = document.getElementById('themeIconSun');
             const moonIcon = document.getElementById('themeIconMoon');
-            try { localStorage.setItem('ag_theme', mode === 'light' ? 'light' : 'dark'); } catch (e) { /* storage unavailable */ }
+            if (persist) {
+                try { localStorage.setItem('theme', mode === 'light' ? 'light' : 'dark'); } catch (e) { /* storage unavailable */ }
+            }
             if (mode === 'light') {
                 html.classList.remove('dark');
                 html.classList.add('light');
@@ -1804,6 +1806,16 @@
                 if (moonIcon) moonIcon.classList.remove('hidden');
             }
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            let saved = null;
+            try { saved = localStorage.getItem('theme'); } catch (e) { /* storage unavailable */ }
+            const html = document.documentElement;
+            const current = html.classList.contains('light') ? 'light' : 'dark';
+            setThemeMode(saved === 'light' || saved === 'dark' ? saved : current, false);
+            const toggle = document.getElementById('theme-toggle');
+            if (toggle) toggle.addEventListener('click', toggleTheme);
+        });
     </script>
 
 
