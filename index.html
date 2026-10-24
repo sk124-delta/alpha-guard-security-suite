@@ -209,7 +209,7 @@
                 <button onclick="switchTab('onboarding')" id="nav-onboarding" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50 transition-all">
                     <i data-lucide="sparkles" class="w-4 h-4 inline mr-1.5"></i> Free Trial & Plan Wizard
                 </button>
-                <button onclick="toggleAuthModal(true)" id="nav-dashboard" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 light:text-slate-600 light:hover:text-slate-900 transition-all">
+                <button onclick="openPortal()" id="nav-dashboard" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 light:text-slate-600 light:hover:text-slate-900 transition-all">
                    <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-1.5"></i> Client Portal & Dashboard
                 </button>
             </nav>
@@ -227,7 +227,7 @@
                 </button>
                 <div id="nav-user-profile" class="hidden items-center space-x-2"></div>
 
-                <button type="button" onclick="toggleAuthModal(true, 'signup')" class="bg-sky-500 hover:bg-sky-600 dark:bg-cyan-400 dark:hover:bg-cyan-300 text-white dark:text-slate-950 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all">
+                <button type="button" onclick="startTrial()" class="bg-sky-500 hover:bg-sky-600 dark:bg-cyan-400 dark:hover:bg-cyan-300 text-white dark:text-slate-950 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all">
                     Start 7-Day Free Trial
                 </button>
             </div>
@@ -1295,7 +1295,7 @@
         const ACTIVE_NAV_CLASS = "nav-btn nav-active px-4 py-2 rounded-lg text-sm font-medium transition-all bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950";
 
         function switchTab(tabId) {
-            if (tabId === 'dashboard' && !adminAccessToken) {
+            if (tabId === 'dashboard' && !adminAccessToken && !hasActiveSession()) {
                 toggleAuthModal(true);
                 return;
             }
@@ -1373,8 +1373,21 @@
             status.classList.toggle('text-emerald-300', !isError);
         }
 
+        function hasActiveSession() {
+            try {
+                const user = JSON.parse(localStorage.getItem('ag_user') || 'null');
+                return !!(localStorage.getItem('ag_token') && user && user.email);
+            } catch (e) { return false; }
+        }
+
         function openPortal() {
-            toggleAuthModal(true);
+            if (hasActiveSession()) switchTab('dashboard');
+            else toggleAuthModal(true);
+        }
+
+        function startTrial() {
+            if (hasActiveSession()) switchTab('onboarding');
+            else toggleAuthModal(true, 'signup');
         }
 
         document.addEventListener('keydown', event => {
@@ -1534,6 +1547,7 @@
                 }
                 toggleAuthModal(false);
                 checkAuthState();
+                if (token && (type === 'login' || type === 'signup')) switchTab('dashboard');
             } catch (err) {
                 alert(err.message || 'Authentication failed. Please try again.');
             }
@@ -1551,6 +1565,8 @@
                 return;
             }
             if (authBtn) authBtn.classList.add('hidden');
+            const startBtn = document.querySelector('button[onclick="startTrial()"]');
+            if (startBtn) startBtn.textContent = 'Open Workspace';
             if (profileNav) {
                 profileNav.innerHTML = '';
                 const badge = document.createElement('span');
@@ -1625,7 +1641,7 @@
             </div>
             <div>
                 <label for="login-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Password</label>
-                <input type="password" id="login-password" autocomplete="current-password" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
+                <input type="password" id="login-password" autocomplete="current-password" data-form-type="other" data-lpignore="true" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
             </div>
             <div class="flex justify-between items-center text-xs">
                 <button type="button" onclick="switchAuthView('forgot')" class="text-cyan-400 hover:underline">Forgot password?</button>
@@ -1649,7 +1665,7 @@
             </div>
             <div>
                 <label for="signup-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Password (8 characters minimum)</label>
-                <input type="password" id="signup-password" autocomplete="new-password" minlength="8" maxlength="128" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
+                <input type="password" id="signup-password" autocomplete="new-password" data-form-type="other" data-lpignore="true" minlength="8" maxlength="128" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
             </div>
             <button type="submit" class="auth-submit-button w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Create Account & Start Trial</button>
         </form>

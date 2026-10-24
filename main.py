@@ -414,7 +414,7 @@ def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(ge
     }
     if data.email in reserved_emails:
         raise HTTPException(status_code=409, detail="This email cannot be used for a customer account.")
-    email_error = "An account with this email address already exists."
+    email_error = "An account with this email address already exists. Please sign in instead."
     domain_error = "This store URL is already registered under another account."
     store_domain = data.store_url  # normalized by the schema validator
 
