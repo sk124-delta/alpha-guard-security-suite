@@ -30,8 +30,13 @@ const passwordResetActionCodeSettings = {
   handleCodeInApp: true,
 };
 
-export function sendPasswordReset(email) {
-  return sendPasswordResetEmail(auth, email, passwordResetActionCodeSettings);
+export async function sendPasswordReset(email) {
+  try {
+    await sendPasswordResetEmail(auth, email, passwordResetActionCodeSettings);
+  } catch (error) {
+    console.error("Password reset request failed:", error.code, error.message, error);
+    throw error;
+  }
 }
 
 export async function submitNewPassword(newPassword) {

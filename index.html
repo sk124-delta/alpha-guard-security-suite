@@ -1905,8 +1905,15 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             let firebaseModule = null;
             try {
                 if (type === 'forgot') {
-                    const { sendPasswordReset } = await import('./src/firebase.js');
-                    await sendPasswordReset(payload.email.trim().toLowerCase());
+                    try {
+                        const { sendPasswordReset } = await import('./src/firebase.js');
+                        await sendPasswordReset(payload.email.trim().toLowerCase());
+                    } catch (resetError) {
+                        console.error('Password reset flow failed:', resetError.code || '', resetError.message, resetError);
+                        throw new Error(resetError.code === 'auth/too-many-requests'
+                            ? 'Too many reset attempts. Please wait a few minutes and try again.'
+                            : 'We could not send the reset email. Please try again.');
+                    }
                     alert('If an account exists for that email, a password reset link has been sent.');
                     toggleAuthModal(false);
                     return;
