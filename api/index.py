@@ -3,7 +3,8 @@ import json
 import logging
 import os
 import resend
-from fastapi import FastAPI, Request
+from urllib.parse import parse_qs, quote, urlparse
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 
@@ -15,7 +16,8 @@ if RESEND_KEY:
     resend.api_key = RESEND_KEY
 
 PASSWORD_RESET_URL = "https://www.alphaguardsuite.com/update-password"
-RESET_SENDER = os.environ.get("AUTH_EMAIL_FROM") or os.environ.get("RESEND_FROM_EMAIL") or "admin@alphaguardsuite.com"
+RESET_PAGE_URL = "https://www.alphaguardsuite.com/update-password.html"
+RESET_SENDER = "no-reply@alphaguardsuite.com"
 
 
 class SendResetRequest(BaseModel):
@@ -38,34 +40,48 @@ def _get_firebase_auth():
 @app.post("/send-reset")
 def send_reset(data: SendResetRequest):
     # Same response whether or not the account exists, so emails can't be enumerated.
-    generic = {"success": True, "message": "If an account exists for that email, a reset link has been sent."}
-    if not RESEND_KEY:
-        logger.error("send-reset: RESEND_API_KEY is not configured.")
-        return JSONResponse(status_code=503, content={"success": False, "error": "Email service is not configured."})
-
+    generic = {"status": "success", "success": True, "message": "If an account exists for that email, a reset link has been sent."}
     try:
+        resend.api_key = os.environ.get("RESEND_API_KEY")
+        if not resend.api_key:
+            raise RuntimeError("RESEND_API_KEY is not configured.")
+
         from firebase_admin import auth as firebase_auth
         auth = _get_firebase_auth()
         settings = firebase_auth.ActionCodeSettings(url=PASSWORD_RESET_URL, handle_code_in_app=True)
-        link = auth.generate_password_reset_link(data.email, action_code_settings=settings)
-        safe_link = html.escape(link, quote=True)
+        try:
+            firebase_link = auth.generate_password_reset_link(data.email, action_code_settings=settings)
+        except firebase_auth.UserNotFoundError:
+            return generic
+
+        oob_code = parse_qs(urlparse(firebase_link).query).get("oobCode", [""])[0]
+        if not oob_code:
+            raise RuntimeError("Firebase did not return a reset code.")
+        reset_link = html.escape(
+            f"{RESET_PAGE_URL}?email={quote(data.email)}&oobCode={quote(oob_code)}", quote=True
+        )
+
         resend.Emails.send({
-            "from": f"AlphaGuard Security Suite <{RESET_SENDER}>",
+            "from": f"AlphaGuard Security <{RESET_SENDER}>",
             "to": [data.email],
-            "subject": "Reset your password for AlphaGuard Security Suite",
-            "html": (
-                "<p>Hello,</p>"
-                "<p>Follow this link to reset your password:</p>"
-                f'<p><a href="{safe_link}">Reset Password</a></p>'
-                "<p>If you didn't ask to reset your password, please ignore this email.</p>"
-            ),
+            "subject": "Reset Password - AlphaGuard Suite",
+            "html": f"""
+                <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #0d1117; color: #c9d1d9; border-radius: 8px;">
+                    <h2 style="color: #06b6d4;">Password Reset Request</h2>
+                    <p>We received a request to reset your password for your AlphaGuard account.</p>
+                    <p>Click the button below to set your new password:</p>
+                    <a href="{reset_link}"
+                       style="background: #06b6d4; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin-top: 10px; margin-bottom: 20px;">
+                       Reset Password
+                    </a>
+                    <p style="color: #8b949e; font-size: 12px;">If you didn't request this, you can safely ignore this email.</p>
+                </div>
+            """,
         })
-    except RuntimeError as exc:
-        logger.error("send-reset: %s", exc)
-        return JSONResponse(status_code=503, content={"success": False, "error": "Password reset is not configured."})
-    except Exception as exc:
-        logger.warning("send-reset failed: %s", exc)
-    return generic
+        return generic
+    except Exception as e:
+        logger.error("send-reset failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
