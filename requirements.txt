@@ -12,3 +12,4 @@ uvicorn
 pydantic
 resend
 email-validator
+firebase-admin
