@@ -62,6 +62,21 @@ class CustomerRegistrationSchema(BaseModel):
         return value
 
 
+class RegistrationAvailabilitySchema(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    store_url: str | None = Field(default=None, max_length=2048)
+
+    @field_validator("store_url")
+    @classmethod
+    def validate_store_url(cls, value: str | None) -> str | None:
+        return CustomerRegistrationSchema.validate_store_url(value)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return CustomerRegistrationSchema.validate_email(value)
+
+
 class CustomerLoginSchema(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=1, max_length=1024)

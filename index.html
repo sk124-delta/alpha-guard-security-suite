@@ -1901,7 +1901,30 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 payload.email = document.getElementById('forgot-email').value;
             }
 
+            let firebaseUser = null;
+            let firebaseModule = null;
             try {
+                if (type === 'forgot') {
+                    const { sendPasswordReset } = await import('./src/firebase.js');
+                    await sendPasswordReset(payload.email.trim().toLowerCase());
+                    alert('If an account exists for that email, a password reset link has been sent.');
+                    toggleAuthModal(false);
+                    return;
+                }
+                if (type === 'signup') {
+                    const availability = await fetch('/api/v1/auth/check-availability', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ email: payload.email, store_url: payload.store_url })
+                    });
+                    if (!availability.ok) {
+                        const info = await availability.json().catch(() => ({}));
+                        throw new Error(info.detail || 'This email or store URL is already registered.');
+                    }
+                    firebaseModule = await import('./src/firebase.js');
+                    firebaseUser = (await firebaseModule.handleSignup(payload.email, payload.password)).user;
+                }
+
                 const endpoint = type === 'signup' ? '/api/v1/auth/register' : '/api/index';
                 const res = await fetch(endpoint, {
                     method: 'POST',
@@ -1912,6 +1935,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 if (!res.ok) {
                     throw new Error(data.detail || data.message || 'An error occurred. Please try again.');
                 }
+                firebaseUser = null;
                 if (type === 'forgot') {
                     alert('Password reset link sent! Please check your inbox.');
                     toggleAuthModal(false);
@@ -1930,7 +1954,9 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 checkAuthState();
                 if (token && (type === 'login' || type === 'signup')) switchTab('dashboard');
             } catch (err) {
-                alert(err.message || 'Authentication failed. Please try again.');
+                const message = err.message || 'Authentication failed. Please try again.';
+                if (firebaseUser && firebaseModule) await firebaseModule.removeFirebaseUser(firebaseUser);
+                alert(message);
             }
         }
 

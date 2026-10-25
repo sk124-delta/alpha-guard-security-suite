@@ -32,6 +32,7 @@ from customer_auth import (
     CustomerRegistrationSchema,
     PasswordResetConfirmSchema,
     PasswordResetRequestSchema,
+    RegistrationAvailabilitySchema,
     create_password_reset_token,
     get_account_email_settings,
     get_password_reset_settings,
@@ -417,23 +418,37 @@ def detect_website_category(data: DomainInspectionSchema):
     }
 
 
-@app.post("/v1/auth/register")
-@app.post("/api/v1/auth/register")
-def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(get_db)):
+REGISTRATION_EMAIL_ERROR = "An account with this email address already exists. Please sign in instead."
+REGISTRATION_DOMAIN_ERROR = "This store URL is already registered under another account."
+
+
+def ensure_registration_available(db: Session, email: str, store_domain: str | None) -> None:
     reserved_emails = {
         os.getenv("ADMIN_EMAIL", "").strip().lower(),
         os.getenv("LEGAL_EMAIL", "").strip().lower(),
     }
-    if data.email in reserved_emails:
+    if email in reserved_emails:
         raise HTTPException(status_code=409, detail="This email cannot be used for a customer account.")
-    email_error = "An account with this email address already exists. Please sign in instead."
-    domain_error = "This store URL is already registered under another account."
-    store_domain = data.store_url  # normalized by the schema validator
-
-    if db.query(CustomerAccountModel).filter(CustomerAccountModel.email == data.email).first():
-        raise HTTPException(status_code=400, detail=email_error)
+    if db.query(CustomerAccountModel).filter(CustomerAccountModel.email == email).first():
+        raise HTTPException(status_code=400, detail=REGISTRATION_EMAIL_ERROR)
     if store_domain and db.query(CustomerAccountModel).filter(CustomerAccountModel.store_domain == store_domain).first():
-        raise HTTPException(status_code=400, detail=domain_error)
+        raise HTTPException(status_code=400, detail=REGISTRATION_DOMAIN_ERROR)
+
+
+@app.post("/v1/auth/check-availability")
+@app.post("/api/v1/auth/check-availability")
+def check_registration_availability(data: RegistrationAvailabilitySchema, db: Session = Depends(get_db)):
+    ensure_registration_available(db, data.email, data.store_url)
+    return {"status": "success", "available": True}
+
+
+@app.post("/v1/auth/register")
+@app.post("/api/v1/auth/register")
+def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(get_db)):
+    email_error = REGISTRATION_EMAIL_ERROR
+    domain_error = REGISTRATION_DOMAIN_ERROR
+    store_domain = data.store_url  # normalized by the schema validator
+    ensure_registration_available(db, data.email, store_domain)
 
     try:
         access_token = issue_customer_token(data.email)
