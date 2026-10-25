@@ -15,7 +15,6 @@ RESEND_KEY = os.environ.get("RESEND_API_KEY")
 if RESEND_KEY:
     resend.api_key = RESEND_KEY
 
-PASSWORD_RESET_URL = "https://www.alphaguardsuite.com/update-password"
 RESET_PAGE_URL = "https://www.alphaguardsuite.com/update-password.html"
 RESET_SENDER = "no-reply@alphaguardsuite.com"
 
@@ -46,13 +45,13 @@ def send_reset(data: SendResetRequest):
         if not resend.api_key:
             raise RuntimeError("RESEND_API_KEY is not configured.")
 
-        from firebase_admin import auth as firebase_auth
         auth = _get_firebase_auth()
-        settings = firebase_auth.ActionCodeSettings(url=PASSWORD_RESET_URL, handle_code_in_app=True)
         try:
-            firebase_link = auth.generate_password_reset_link(data.email, action_code_settings=settings)
-        except firebase_auth.UserNotFoundError:
+            auth.get_user_by_email(data.email)
+        except auth.UserNotFoundError:
             return generic
+
+        firebase_link = auth.generate_password_reset_link(data.email)
 
         oob_code = parse_qs(urlparse(firebase_link).query).get("oobCode", [""])[0]
         if not oob_code:
