@@ -1906,13 +1906,18 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             try {
                 if (type === 'forgot') {
                     try {
-                        const { sendPasswordReset } = await import('./src/firebase.js');
-                        await sendPasswordReset(payload.email.trim().toLowerCase());
+                        const resetRes = await fetch('/api/send-reset', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ email: payload.email.trim().toLowerCase() })
+                        });
+                        if (!resetRes.ok) {
+                            const resetBody = await resetRes.json().catch(() => ({}));
+                            throw new Error(`send-reset responded ${resetRes.status}: ${resetBody.error || resetBody.detail || 'unknown error'}`);
+                        }
                     } catch (resetError) {
-                        console.error('Password reset flow failed:', resetError.code || '', resetError.message, resetError);
-                        throw new Error(resetError.code === 'auth/too-many-requests'
-                            ? 'Too many reset attempts. Please wait a few minutes and try again.'
-                            : 'We could not send the reset email. Please try again.');
+                        console.error('Password reset flow failed:', resetError);
+                        throw new Error('We could not send the reset email. Please try again.');
                     }
                     alert('If an account exists for that email, a password reset link has been sent.');
                     toggleAuthModal(false);
