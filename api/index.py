@@ -35,6 +35,7 @@ def _get_firebase_auth():
 
 
 @app.post("/api/send-reset")
+@app.post("/send-reset")
 def send_reset(data: SendResetRequest):
     # Same response whether or not the account exists, so emails can't be enumerated.
     generic = {"success": True, "message": "If an account exists for that email, a reset link has been sent."}
