@@ -13,7 +13,7 @@ resend.api_key = os.environ.get("RESEND_API_KEY")
 @app.post("/api/send-reset")
 async def send_reset(data: ResetRequest):
     try:
-        sender = "onboarding@resend.dev"
+        sender = "no-reply@alphaguardsuite.com"
         resend.Emails.send({
             "from": f"AlphaGuard Security <{sender}>",
             "to": [data.email],
