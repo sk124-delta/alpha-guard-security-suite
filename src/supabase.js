@@ -11,6 +11,20 @@ if (!window.supabase?.createClient) {
 
 export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+export async function handleSignUp(email, password, fullName) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+
+  if (error) {
+    console.error("Signup error:", error.message);
+    throw error;
+  }
+  return data;
+}
+
 export async function handlePasswordReset(email) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: "https://www.alphaguardsuite.com/update-password.html",

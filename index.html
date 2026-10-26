@@ -1902,8 +1902,6 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 payload.email = document.getElementById('forgot-email').value;
             }
 
-            let firebaseUser = null;
-            let firebaseModule = null;
             try {
                 if (type === 'forgot') {
                     const resetEmail = payload.email.trim().toLowerCase();
@@ -1928,8 +1926,8 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                         const info = await availability.json().catch(() => ({}));
                         throw new Error(info.detail || 'This email or store URL is already registered.');
                     }
-                    firebaseModule = await import('./src/firebase.js');
-                    firebaseUser = (await firebaseModule.handleSignup(payload.email, payload.password)).user;
+                    const { handleSignUp } = await import('./src/supabase.js');
+                    await handleSignUp(payload.email, payload.password, payload.name);
                 }
 
                 const endpoint = type === 'signup' ? '/api/v1/auth/register' : '/api/index';
@@ -1942,7 +1940,6 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 if (!res.ok) {
                     throw new Error(data.detail || data.message || 'An error occurred. Please try again.');
                 }
-                firebaseUser = null;
                 if (type === 'forgot') {
                     alert('Password reset link sent! Please check your inbox.');
                     toggleAuthModal(false);
@@ -1962,7 +1959,6 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 if (token && (type === 'login' || type === 'signup')) switchTab('dashboard');
             } catch (err) {
                 const message = err.message || 'Authentication failed. Please try again.';
-                if (firebaseUser && firebaseModule) await firebaseModule.removeFirebaseUser(firebaseUser);
                 alert(message);
             }
         }
