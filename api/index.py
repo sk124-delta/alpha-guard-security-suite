@@ -3,7 +3,7 @@ import json
 import logging
 import os
 import resend
-from urllib.parse import parse_qs, quote, urlparse
+import requests
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
@@ -17,22 +17,51 @@ if RESEND_KEY:
 
 RESET_PAGE_URL = "https://www.alphaguardsuite.com/update-password.html"
 RESET_SENDER = "no-reply@alphaguardsuite.com"
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
 
 
 class SendResetRequest(BaseModel):
     email: EmailStr
 
 
-def _get_firebase_auth():
-    import firebase_admin
-    from firebase_admin import auth, credentials
+def _get_supabase_recovery_link(email: str) -> str | None:
+    supabase_url = SUPABASE_URL or os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    supabase_key = (
+        os.environ.get("SUPABASE_SECRET_KEY", "").strip()
+        or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    )
+    if not supabase_url:
+        raise RuntimeError("SUPABASE_URL is not configured.")
+    if not supabase_key:
+        raise RuntimeError("SUPABASE_SECRET_KEY is not configured.")
 
-    if not firebase_admin._apps:
-        service_account = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
-        if not service_account:
-            raise RuntimeError("FIREBASE_SERVICE_ACCOUNT_JSON is not configured.")
-        firebase_admin.initialize_app(credentials.Certificate(json.loads(service_account)))
-    return auth
+    response = requests.post(
+        f"{supabase_url}/auth/v1/admin/generate_link",
+        headers={
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+        },
+        json={
+            "type": "recovery",
+            "email": email,
+            "redirect_to": RESET_PAGE_URL,
+        },
+        timeout=(3, 10),
+    )
+    if response.status_code in (400, 404) and any(
+        phrase in response.text.lower()
+        for phrase in ("user not found", "no user found")
+    ):
+        return None
+    response.raise_for_status()
+
+    result = response.json()
+    action_link = result.get("action_link")
+    if not action_link and isinstance(result.get("properties"), dict):
+        action_link = result["properties"].get("action_link")
+    if not isinstance(action_link, str) or not action_link:
+        raise RuntimeError("Supabase did not return a recovery link.")
+    return action_link
 
 
 @app.post("/api/send-reset")
@@ -45,20 +74,11 @@ def send_reset(data: SendResetRequest):
         if not resend.api_key:
             raise RuntimeError("RESEND_API_KEY is not configured.")
 
-        auth = _get_firebase_auth()
-        try:
-            auth.get_user_by_email(data.email)
-        except auth.UserNotFoundError:
+        recovery_link = _get_supabase_recovery_link(str(data.email).strip().lower())
+        if recovery_link is None:
             return generic
 
-        firebase_link = auth.generate_password_reset_link(data.email)
-
-        oob_code = parse_qs(urlparse(firebase_link).query).get("oobCode", [""])[0]
-        if not oob_code:
-            raise RuntimeError("Firebase did not return a reset code.")
-        reset_link = html.escape(
-            f"{RESET_PAGE_URL}?email={quote(data.email)}&oobCode={quote(oob_code)}", quote=True
-        )
+        reset_link = html.escape(recovery_link, quote=True)
 
         resend.Emails.send({
             "from": f"AlphaGuard Security <{RESET_SENDER}>",
@@ -79,8 +99,11 @@ def send_reset(data: SendResetRequest):
         })
         return generic
     except Exception as e:
-        logger.error("send-reset failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("send-reset failed: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not send a password reset email. Please try again later.",
+        ) from e
 
 
 @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
