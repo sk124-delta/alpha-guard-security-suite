@@ -6,7 +6,7 @@ import resend
 import requests
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ValidationError
 
 app = FastAPI()
 logger = logging.getLogger(__name__)
@@ -129,6 +129,13 @@ async def catch_all(request: Request, path: str = ""):
     name = body.get("name", "User")
     email_sent = False
 
+    if action in ["forgot", "reset"]:
+        try:
+            reset_request = SendResetRequest.model_validate({"email": email})
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail="A valid email address is required.") from exc
+        return JSONResponse(content=send_reset(reset_request))
+
     if RESEND_KEY and email:
         try:
             if action in ["signup", "register"]:
@@ -137,14 +144,6 @@ async def catch_all(request: Request, path: str = ""):
                     "to": [email],
                     "subject": "Welcome to AlphaGuard Security Suite",
                     "html": f"<h2>Welcome {name}!</h2><p>Your trial account has been created successfully.</p>"
-                })
-                email_sent = True
-            elif action in ["forgot", "reset"]:
-                resend.Emails.send({
-                    "from": "AlphaGuard Security <no-reply@alphaguardsuite.com>",
-                    "to": [email],
-                    "subject": "Reset Password - AlphaGuard Suite",
-                    "html": f"<p>Password reset instructions requested for {email}.</p>"
                 })
                 email_sent = True
         except Exception as e:

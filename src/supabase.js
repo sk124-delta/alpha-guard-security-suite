@@ -10,14 +10,3 @@ if (!window.supabase?.createClient) {
 }
 
 export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-export async function handlePasswordReset(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: "https://www.alphaguardsuite.com/update-password.html",
-  });
-
-  if (error) {
-    console.error("Error sending password reset:", error.message);
-    throw error;
-  }
-}

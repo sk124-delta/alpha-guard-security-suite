@@ -1908,10 +1908,17 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 if (type === 'forgot') {
                     const resetEmail = payload.email.trim().toLowerCase();
                     try {
-                        const { handlePasswordReset } = await import('./src/supabase.js');
-                        await handlePasswordReset(resetEmail);
+                        const resetRes = await fetch('/api/send-reset', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ email: resetEmail, action: 'forgot' })
+                        });
+                        if (!resetRes.ok) {
+                            const resetBody = await resetRes.json().catch(() => ({}));
+                            throw new Error(resetBody.detail || 'We could not send the reset email. Please try again.');
+                        }
                     } catch (resetError) {
-                        console.error('Supabase password reset failed:', resetError);
+                        console.error('Password reset request failed:', resetError);
                         throw new Error(resetError.message || 'We could not send the reset email. Please try again.');
                     }
                     alert('If an account exists for that email, a password reset link has been sent.');
