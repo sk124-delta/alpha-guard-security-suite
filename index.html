@@ -1245,6 +1245,22 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                         </button>
                     </div>
 
+                    <!-- Drag and Drop Image Testing Box -->
+                    <div class="pt-6 border-t border-slate-800">
+                        <div class="text-xs font-mono text-slate-400 mb-3">PRODUCT PHOTO TEST</div>
+                        <div id="drop-zone" tabindex="0" role="button" aria-label="Drag and drop a product photo here, or press Enter to browse" style="border: 2px dashed #06b6d4; padding: 40px; text-align: center; border-radius: 12px; background: #0d1117; color: #c9d1d9; margin: 0 auto; max-width: 500px;">
+                            <p style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Drag &amp; Drop your product photo here</p>
+                            <p style="color: #8b949e; font-size: 13px; margin-bottom: 15px;">or click to browse from your computer</p>
+                            <input type="file" id="file-input" accept="image/*" style="display: none;">
+                            <button type="button" id="drop-browse-btn" style="background: #06b6d4; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Browse File</button>
+                            <div id="drop-preview" class="hidden" style="margin-top: 20px;">
+                                <img id="drop-preview-img" alt="Selected product photo preview" style="max-width: 100%; max-height: 240px; border-radius: 8px; margin: 0 auto; display: block;">
+                                <p id="drop-file-info" style="color: #8b949e; font-size: 12px; margin-top: 10px; word-break: break-all;"></p>
+                            </div>
+                            <p id="drop-error" class="hidden" role="alert" style="color: #f87171; font-size: 12px; margin-top: 12px;"></p>
+                        </div>
+                    </div>
+
                     <!-- Recently Added Assets -->
                     <div class="pt-6 border-t border-slate-800">
                         <div class="text-xs font-mono text-slate-400 mb-3">CONNECTED ASSET DOMAINS</div>
@@ -1685,6 +1701,69 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 }
             });
         }
+
+        function initDropZone() {
+            const zone = document.getElementById('drop-zone');
+            const input = document.getElementById('file-input');
+            const browseBtn = document.getElementById('drop-browse-btn');
+            if (!zone || !input || !browseBtn) return;
+            const preview = document.getElementById('drop-preview');
+            const previewImg = document.getElementById('drop-preview-img');
+            const info = document.getElementById('drop-file-info');
+            const errorEl = document.getElementById('drop-error');
+            let previewUrl = null;
+
+            // Stop the browser from navigating to an image dropped outside the zone
+            ['dragover', 'drop'].forEach(name => document.addEventListener(name, (event) => {
+                if (!zone.contains(event.target)) event.preventDefault();
+            }));
+            function showError(message) {
+                errorEl.textContent = message;
+                errorEl.classList.toggle('hidden', !message);
+            }
+
+            function formatSize(bytes) {
+                if (bytes < 1024) return `${bytes} B`;
+                if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+            }
+
+            function handleFile(file) {
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    showError('Please choose an image file (JPG, PNG, WebP, GIF).');
+                    return;
+                }
+                showError('');
+                window.agSelectedImage = file;
+                if (previewUrl) URL.revokeObjectURL(previewUrl);
+                previewUrl = URL.createObjectURL(file);
+                previewImg.src = previewUrl;
+                info.textContent = `${file.name} — ${formatSize(file.size)}`;
+                preview.classList.remove('hidden');
+            }
+
+            browseBtn.addEventListener('click', (event) => { event.stopPropagation(); input.click(); });
+            zone.addEventListener('click', (event) => { if (event.target !== input) input.click(); });
+            zone.addEventListener('keydown', (event) => {
+                if ((event.key === 'Enter' || event.key === ' ') && event.target === zone) {
+                    event.preventDefault();
+                    input.click();
+                }
+            });
+            input.addEventListener('change', () => { handleFile(input.files[0]); input.value = ''; });
+
+            ['dragenter', 'dragover'].forEach(name => zone.addEventListener(name, (event) => {
+                event.preventDefault();
+                zone.style.background = '#16202b';
+            }));
+            ['dragleave', 'drop'].forEach(name => zone.addEventListener(name, (event) => {
+                event.preventDefault();
+                zone.style.background = '#0d1117';
+            }));
+            zone.addEventListener('drop', (event) => handleFile(event.dataTransfer.files[0]));
+        }
+        document.addEventListener('DOMContentLoaded', initDropZone);
 
         function openTab(name) {
             switchTab('dashboard');
