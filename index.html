@@ -44,6 +44,7 @@
     </script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
@@ -1907,26 +1908,11 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 if (type === 'forgot') {
                     const resetEmail = payload.email.trim().toLowerCase();
                     try {
-                        const resetRes = await fetch('/api/send-reset', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ email: resetEmail })
-                        });
-                        if (!resetRes.ok) {
-                            const resetBody = await resetRes.json().catch(() => ({}));
-                            throw new Error(`send-reset responded ${resetRes.status}: ${resetBody.error || resetBody.detail || 'unknown error'}`);
-                        }
+                        const { handlePasswordReset } = await import('./src/supabase.js');
+                        await handlePasswordReset(resetEmail);
                     } catch (resetError) {
-                        console.error('Backend reset failed, falling back to Firebase:', resetError);
-                        try {
-                            const { sendPasswordReset } = await import('./src/firebase.js');
-                            await sendPasswordReset(resetEmail);
-                        } catch (fallbackError) {
-                            console.error('Firebase reset fallback failed:', fallbackError.code || '', fallbackError);
-                            throw new Error(fallbackError.code === 'auth/too-many-requests'
-                                ? 'Too many reset attempts. Please wait a few minutes and try again.'
-                                : 'We could not send the reset email. Please try again.');
-                        }
+                        console.error('Supabase password reset failed:', resetError);
+                        throw new Error(resetError.message || 'We could not send the reset email. Please try again.');
                     }
                     alert('If an account exists for that email, a password reset link has been sent.');
                     toggleAuthModal(false);
