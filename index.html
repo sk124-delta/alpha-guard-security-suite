@@ -901,7 +901,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                         <label class="block text-xs font-mono text-slate-300 light:text-slate-700">Official Brand Website URL</label>
                         <div class="relative">
                             <i data-lucide="globe" class="w-5 h-5 absolute left-3.5 top-3.5 text-slate-500"></i>
-                            <input type="url" id="ob-url" value="https://mybrandstore.com" placeholder="https://yourstore.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:border-cyber-cyan focus:outline-none dark:bg-slate-900 light:bg-slate-50 light:border-slate-300 light:text-slate-900 font-mono">
+                            <input type="url" id="ob-url" value="" placeholder="https://yourstore.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:border-cyber-cyan focus:outline-none dark:bg-slate-900 light:bg-slate-50 light:border-slate-300 light:text-slate-900 font-mono">
                         </div>
                     </div>
 
@@ -1999,6 +1999,65 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             
             const recEl = document.getElementById('wizard-recommendation');
             if (recEl) recEl.classList.add('hidden');
+        }
+
+        let diagnosticTimer = null;
+
+        function runDiagnosticAndRecommend() {
+            const domain = normalizeStoreDomain(document.getElementById('ob-url')?.value || '');
+            if (!domain || !domain.includes('.')) {
+                alert('Please enter a valid website URL, e.g. https://yourstore.com');
+                return;
+            }
+
+            const scanBox = document.getElementById('scan-simulation-box');
+            const logsContainer = document.getElementById('scan-logs');
+            const statusText = document.getElementById('scan-status-text');
+            const runBtn = document.getElementById('btn-run-scan');
+            const recBox = document.getElementById('wizard-recommendation');
+
+            if (diagnosticTimer) clearInterval(diagnosticTimer);
+            if (recBox) recBox.classList.add('hidden');
+            if (scanBox) scanBox.classList.remove('hidden');
+            if (logsContainer) logsContainer.replaceChildren();
+            if (statusText) statusText.textContent = 'INITIALIZING AUTOMATED DIAGNOSTIC SCAN...';
+            if (runBtn) runBtn.disabled = true;
+
+            const logs = [
+                'Connecting to target endpoint...',
+                'Resolving SSL certificate and DNS records...',
+                'Reviewing public product imagery and metadata...',
+                'Preparing catalog index for protection...',
+                'Diagnostic complete. Generating recommended plan...'
+            ];
+
+            let i = 0;
+            diagnosticTimer = setInterval(() => {
+                if (i < logs.length) {
+                    if (logsContainer) {
+                        const line = document.createElement('div');
+                        line.textContent = `[INFO] ${logs[i]}`;
+                        logsContainer.appendChild(line);
+                        logsContainer.scrollTop = logsContainer.scrollHeight;
+                    }
+                    i++;
+                    return;
+                }
+                clearInterval(diagnosticTimer);
+                diagnosticTimer = null;
+                if (runBtn) runBtn.disabled = false;
+                if (statusText) statusText.textContent = 'SCAN COMPLETE — RECOMMENDED PLAN READY';
+                if (!recBox) return;
+                recBox.classList.remove('hidden');
+                const setText = (id, text) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = text;
+                };
+                setText('rec-plan-name', 'Pro Defense Tier');
+                setText('rec-plan-price', '$249 / month (7 Days Free)');
+                setText('rec-plan-assets', 'Analyzed Domain: ' + domain);
+                setText('rec-plan-reason', 'Optimized for catalog protection against automated scrapers and copycat listings.');
+            }, 400);
         }
 
         function updateSubcatOptions() {
