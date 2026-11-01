@@ -1,9 +1,9 @@
 import html
-import json
 import logging
 import os
-import resend
+
 import requests
+import resend
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, ValidationError
@@ -15,21 +15,66 @@ RESEND_KEY = os.environ.get("RESEND_API_KEY")
 if RESEND_KEY:
     resend.api_key = RESEND_KEY
 
-RESET_PAGE_URL = "https://www.alphaguardsuite.com/update-password.html"
-RESET_SENDER = "no-reply@alphaguardsuite.com"
+RESET_PAGE_URL = os.environ.get(
+    "PASSWORD_RESET_REDIRECT_URL",
+    "https://www.alphaguardsuite.com/update-password",
+).strip()
+RESET_SENDER = os.environ.get("AUTH_EMAIL_FROM") or os.environ.get(
+    "RESEND_FROM_EMAIL", "no-reply@alphaguardsuite.com"
+)
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+UNKNOWN_USER_PHRASES = (
+    "user not found",
+    "no user found",
+    "unable to find user",
+    "user with this email",
+)
+
+GENERIC_RESET = {
+    "status": "success",
+    "success": True,
+    "message": "If an account exists for that email, a reset link has been sent.",
+}
 
 
 class SendResetRequest(BaseModel):
     email: EmailStr
 
 
-def _get_supabase_recovery_link(email: str) -> str | None:
-    supabase_url = SUPABASE_URL or os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
-    supabase_key = (
+class SignupNotifyRequest(BaseModel):
+    email: EmailStr
+    name: str = "User"
+
+
+def _combined_path(request: Request, path: str = "") -> str:
+    parts = [
+        path,
+        request.url.path,
+        request.headers.get("x-invoke-path", ""),
+        request.headers.get("x-matched-path", ""),
+        request.headers.get("x-forwarded-uri", ""),
+        request.headers.get("x-vercel-original-path", ""),
+    ]
+    return " ".join(part for part in parts if part).lower()
+
+
+def _is_unknown_user_response(response: requests.Response) -> bool:
+    text = (response.text or "").lower()
+    return response.status_code in (400, 404, 422) and any(
+        phrase in text for phrase in UNKNOWN_USER_PHRASES
+    )
+
+
+def _service_role_key() -> str:
+    return (
         os.environ.get("SUPABASE_SECRET_KEY", "").strip()
         or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     )
+
+
+def _get_supabase_recovery_link(email: str) -> str | None:
+    supabase_url = SUPABASE_URL or os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    supabase_key = _service_role_key()
     if not supabase_url:
         raise RuntimeError("SUPABASE_URL is not configured.")
     if not supabase_key:
@@ -40,6 +85,7 @@ def _get_supabase_recovery_link(email: str) -> str | None:
         headers={
             "apikey": supabase_key,
             "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
         },
         json={
             "type": "recovery",
@@ -48,10 +94,7 @@ def _get_supabase_recovery_link(email: str) -> str | None:
         },
         timeout=(3, 10),
     )
-    if response.status_code in (400, 404) and any(
-        phrase in response.text.lower()
-        for phrase in ("user not found", "no user found")
-    ):
+    if _is_unknown_user_response(response):
         return None
     response.raise_for_status()
 
@@ -64,25 +107,22 @@ def _get_supabase_recovery_link(email: str) -> str | None:
     return action_link
 
 
-@app.post("/api/send-reset")
-@app.post("/send-reset")
 def send_reset(data: SendResetRequest):
     # Same response whether or not the account exists, so emails can't be enumerated.
-    generic = {"status": "success", "success": True, "message": "If an account exists for that email, a reset link has been sent."}
     try:
-        resend.api_key = os.environ.get("RESEND_API_KEY")
-        if not resend.api_key:
+        api_key = os.environ.get("RESEND_API_KEY")
+        resend.api_key = api_key
+        if not api_key:
             raise RuntimeError("RESEND_API_KEY is not configured.")
 
         recovery_link = _get_supabase_recovery_link(str(data.email).strip().lower())
         if recovery_link is None:
-            return generic
+            return GENERIC_RESET
 
         reset_link = html.escape(recovery_link, quote=True)
-
         resend.Emails.send({
             "from": f"AlphaGuard Security <{RESET_SENDER}>",
-            "to": [data.email],
+            "to": [str(data.email).strip().lower()],
             "subject": "Reset Password - AlphaGuard Suite",
             "html": f"""
                 <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #0d1117; color: #c9d1d9; border-radius: 8px;">
@@ -97,64 +137,99 @@ def send_reset(data: SendResetRequest):
                 </div>
             """,
         })
-        return generic
+        return GENERIC_RESET
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("send-reset failed: %s", e)
+        # 503 (not 500) so the client can fall back to Supabase-hosted recovery mail.
         raise HTTPException(
-            status_code=500,
+            status_code=503,
             detail="Could not send a password reset email. Please try again later.",
         ) from e
+
+
+def _signup_welcome(data: SignupNotifyRequest) -> JSONResponse:
+    email_sent = False
+    if RESEND_KEY:
+        try:
+            resend.api_key = os.environ.get("RESEND_API_KEY")
+            resend.Emails.send({
+                "from": f"AlphaGuard Security <{RESET_SENDER}>",
+                "to": [str(data.email).strip().lower()],
+                "subject": "Welcome to AlphaGuard Security Suite",
+                "html": f"<h2>Welcome {html.escape(data.name)}!</h2><p>Your trial account has been created successfully.</p>",
+            })
+            email_sent = True
+        except Exception as e:
+            logger.exception("Welcome email failed: %s", e)
+
+    return JSONResponse(content={
+        "status": "success",
+        "success": True,
+        "message": "Account recorded.",
+        "email_dispatched": email_sent,
+        "role": "customer",
+    })
+
+
+@app.post("/api/send-reset")
+@app.post("/send-reset")
+def send_reset_route(data: SendResetRequest):
+    return send_reset(data)
 
 
 @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def catch_all(request: Request, path: str = ""):
+    if request.method != "POST":
+        return JSONResponse(status_code=404, content={"detail": "Not found."})
+
     try:
         body = await request.json()
     except Exception:
         body = {}
+    if not isinstance(body, dict):
+        body = {}
 
-    action = body.get("action")
-    if not action:
-        if "register" in path or "signup" in path:
-            action = "signup"
-        elif "token" in path or "login" in path:
-            action = "login"
-        elif "reset" in path or "forgot" in path:
-            action = "forgot"
-        else:
-            action = "signup"
+    action = str(body.get("action") or "").strip().lower()
+    combined = _combined_path(request, path)
 
-    email = body.get("email", "")
-    name = body.get("name", "User")
-    email_sent = False
-
-    if action in ["forgot", "reset"]:
+    if (
+        action in {"forgot", "reset"}
+        or "send-reset" in combined
+        or "forgot-password" in combined
+        or "reset-password" in combined
+    ):
         try:
-            reset_request = SendResetRequest.model_validate({"email": email})
+            reset_request = SendResetRequest.model_validate({"email": body.get("email", "")})
         except ValidationError as exc:
             raise HTTPException(status_code=422, detail="A valid email address is required.") from exc
         return JSONResponse(content=send_reset(reset_request))
 
-    if RESEND_KEY and email:
-        try:
-            if action in ["signup", "register"]:
-                resend.Emails.send({
-                    "from": "AlphaGuard Security <no-reply@alphaguardsuite.com>",
-                    "to": [email],
-                    "subject": "Welcome to AlphaGuard Security Suite",
-                    "html": f"<h2>Welcome {name}!</h2><p>Your trial account has been created successfully.</p>"
-                })
-                email_sent = True
-        except Exception as e:
-            print(f"Resend dispatch error: {e}")
+    if "check-availability" in combined:
+        return JSONResponse(content={
+            "status": "success",
+            "available": True,
+            "message": "Availability is enforced by Supabase Auth.",
+        })
 
-    # Return fields matching what frontend auth parsers look for
-    return JSONResponse(content={
-        "status": "success",
-        "success": True,
-        "token": "demo_token_xyz_12345",
-        "access_token": "demo_token_xyz_12345",
-        "message": f"Action '{action}' completed successfully",
-        "email_dispatched": email_sent
-    })
+    if action in {"signup", "register"} or "register" in combined or "signup" in combined:
+        try:
+            notify = SignupNotifyRequest.model_validate({
+                "email": body.get("email", ""),
+                "name": body.get("name") or "User",
+            })
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail="A valid email address is required.") from exc
+        return _signup_welcome(notify)
+
+    if action == "login" or "token" in combined or "login" in combined:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "detail": "Sign in with your AlphaGuard account. Demo tokens are disabled.",
+            },
+        )
+
+    return JSONResponse(status_code=404, content={"detail": "Not found."})

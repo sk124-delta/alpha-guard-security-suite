@@ -9,29 +9,83 @@ if (!window.supabase?.createClient) {
   throw new Error("The Supabase JavaScript CDN library did not load.");
 }
 
-export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+export const RESET_REDIRECT_URL = isLocalHost
+  ? `${window.location.origin}/update-password`
+  : "https://www.alphaguardsuite.com/update-password";
 
-export async function handleSignUp(email, password, fullName) {
+export const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: "pkce",
+    storage: window.localStorage,
+  },
+});
+
+function authError(error, fallback) {
+  console.error(fallback, error?.message || error);
+  const err = new Error(error?.message || fallback);
+  err.cause = error;
+  throw err;
+}
+
+export async function handleSignUp(email, password, fullName, storeUrl) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: {
+      data: {
+        full_name: fullName,
+        store_name: fullName,
+        store_url: storeUrl || "",
+      },
+    },
   });
 
-  if (error) {
-    console.error("Signup error:", error.message);
-    throw error;
-  }
+  if (error) authError(error, "Signup error:");
   return data;
+}
+
+export async function handleSignIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) authError(error, "Sign-in error:");
+  return data;
+}
+
+export async function handleSignOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) authError(error, "Sign-out error:");
 }
 
 export async function handlePasswordReset(email) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: "https://www.alphaguardsuite.com/update-password.html",
+    redirectTo: RESET_REDIRECT_URL,
   });
+  if (error) authError(error, "Supabase reset error:");
+}
 
-  if (error) {
-    console.error("Supabase reset error:", error.message);
-    throw error;
-  }
+export async function getCurrentSession() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) authError(error, "Session error:");
+  return data.session || null;
+}
+
+export function onAuthStateChange(callback) {
+  return supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session);
+  });
+}
+
+export async function updatePassword(password) {
+  const { data, error } = await supabase.auth.updateUser({ password });
+  if (error) authError(error, "Password update error:");
+  return data;
+}
+
+export async function exchangeRecoveryCode(code) {
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) authError(error, "Recovery code error:");
+  return data;
 }

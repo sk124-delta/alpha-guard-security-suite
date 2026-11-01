@@ -968,14 +968,14 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                     </div>
                     <div>
                         <div class="flex items-center space-x-2">
-                            <h2 id="dash-brand-name" class="text-xl font-bold text-slate-900 dark:text-white">mybrandstore.com</h2>
+                            <h2 id="dash-brand-name" class="text-xl font-bold text-slate-900 dark:text-white">Your Store</h2>
                             <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center space-x-1">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                                 <span>LIVE AUTO-SYNC</span>
                             </span>
                         </div>
                         <div class="text-xs text-slate-400 light:text-slate-600 mt-0.5 flex items-center space-x-3">
-                            <span>Plan: <strong id="dash-plan-badge" class="text-cyber-cyan">Pro Defense ($249/mo)</strong></span>
+                            <span>Plan: <strong id="dash-plan-badge" class="text-cyber-cyan">Free Trial</strong></span>
                             <span>•</span>
                             <span>Trial Status: <strong class="text-emerald-400">7 Days Free Active</strong></span>
                         </div>
@@ -1028,7 +1028,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 <button onclick="switchDashTab('queue')" id="dash-tab-queue" class="dash-nav pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
                     <i data-lucide="list-checks" class="w-4 h-4"></i>
                     <span>7-Day Escalation Queue</span>
-                    <span id="queue-count-badge" class="px-2 py-0.5 text-[10px] rounded-full bg-cyber-cyan/20 text-cyber-cyan">3 Active</span>
+                    <span id="queue-count-badge" class="px-2 py-0.5 text-[10px] rounded-full bg-cyber-cyan/20 text-cyber-cyan">0 Active</span>
                 </button>
                 <button onclick="switchDashTab('importer')" id="dash-tab-importer" class="dash-nav pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
@@ -1049,8 +1049,8 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                             <span>WEBSITES SYNCED</span>
                             <i data-lucide="globe" class="w-4 h-4 text-cyber-cyan"></i>
                         </div>
-                        <div class="text-2xl font-bold text-white light:text-slate-900 mt-2">2 Active</div>
-                        <div class="text-[11px] text-emerald-400 mt-1">100% Webhook Health</div>
+                        <div id="stat-sites" class="text-2xl font-bold text-white light:text-slate-900 mt-2">0 Active</div>
+                        <div class="text-[11px] text-emerald-400 mt-1">Waiting for first catalog sync</div>
                     </div>
 
                     <div class="p-5 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f]">
@@ -1058,8 +1058,8 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                             <span>TOTAL SCANS PERFORMED</span>
                             <i data-lucide="search" class="w-4 h-4 text-indigo-400"></i>
                         </div>
-                        <div id="stat-scans" class="text-2xl font-bold text-white light:text-slate-900 mt-2 font-mono">14,820</div>
-                        <div class="text-[11px] text-slate-400 mt-1">+120 scans last hour</div>
+                        <div id="stat-scans" class="text-2xl font-bold text-white light:text-slate-900 mt-2 font-mono">0</div>
+                        <div class="text-[11px] text-slate-400 mt-1">No scans yet</div>
                     </div>
 
                     <div class="p-5 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f]">
@@ -1067,8 +1067,8 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                             <span>THREATS IDENTIFIED</span>
                             <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
                         </div>
-                        <div id="stat-threats" class="text-2xl font-bold text-amber-400 mt-2 font-mono">28</div>
-                        <div class="text-[11px] text-slate-400 mt-1">3 pending resolution</div>
+                        <div id="stat-threats" class="text-2xl font-bold text-amber-400 mt-2 font-mono">0</div>
+                        <div class="text-[11px] text-slate-400 mt-1">No threats identified</div>
                     </div>
 
                     <div class="p-5 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f]">
@@ -1076,8 +1076,8 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                             <span>NOTICES DISPATCHED</span>
                             <i data-lucide="send" class="w-4 h-4 text-cyan-400"></i>
                         </div>
-                        <div id="stat-notices" class="text-2xl font-bold text-white light:text-slate-900 mt-2 font-mono">25</div>
-                        <div class="text-[11px] text-slate-400 mt-1">DMCA & SERP De-index</div>
+                        <div id="stat-notices" class="text-2xl font-bold text-white light:text-slate-900 mt-2 font-mono">0</div>
+                        <div class="text-[11px] text-slate-400 mt-1">No notices dispatched</div>
                     </div>
 
                     <div class="p-5 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f]">
@@ -1085,8 +1085,8 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                             <span>TAKEDOWN SUCCESS RATE</span>
                             <i data-lucide="check-check" class="w-4 h-4 text-emerald-400"></i>
                         </div>
-                        <div class="text-2xl font-bold text-emerald-400 mt-2 font-mono">96.4%</div>
-                        <div class="text-[11px] text-emerald-400 mt-1">25 of 28 Removed</div>
+                        <div id="stat-success" class="text-2xl font-bold text-emerald-400 mt-2 font-mono">—</div>
+                        <div class="text-[11px] text-emerald-400 mt-1">No takedowns yet</div>
                     </div>
                 </div>
 
@@ -1142,7 +1142,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
 
             <!-- TAB 2: 7-DAY ESCALATION QUEUE -->
             <div id="dash-sec-queue" class="hidden space-y-6">
-                <div class="p-6 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-amber-500/30 space-y-4">
+                <div id="admin-notice-panel" class="hidden p-6 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-amber-500/30 space-y-4">
                     <div>
                         <h3 class="font-bold text-slate-900 dark:text-white text-base">Admin Notice Dispatch</h3>
                         <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Sign in to review persisted high-confidence notice drafts. Each dispatch requires confirmation and is sent using the configured Resend account.</p>
@@ -1547,45 +1547,13 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             }
         };
 
-        // MOCK ESCALATION QUEUE ITEMS
-        let escalationQueue = [
-            {
-                id: "INC-8821",
-                url: "https://fastfashion-scam-store.shop/item-99",
-                host: "Cloudflare / Namecheap",
-                tier: "Tier 1: DMCA Notice Sent",
-                tierClass: "text-cyber-cyan border-cyber-cyan/30",
-                status: "Pending Response (24h left)",
-                statusClass: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-                timestamp: "Today, 02:15 PM"
-            },
-            {
-                id: "INC-8819",
-                url: "https://clone-boutique-deals.xyz/lookbook",
-                host: "Rogue Hosting Ltd",
-                tier: "Tier 2: Google SERP De-Index",
-                tierClass: "text-amber-400 border-amber-400/30",
-                status: "SERP Wipe Dispatched",
-                statusClass: "bg-cyber-cyan/10 text-cyber-cyan border-cyber-cyan/30",
-                timestamp: "Yesterday, 11:40 AM"
-            },
-            {
-                id: "INC-8802",
-                url: "https://pirate-course-hub.top/edtech-rip",
-                host: "Offshore Host Corp",
-                tier: "Tier 3: Registrar Abuse Lock",
-                tierClass: "text-rose-400 border-rose-400/30",
-                status: "Registrar Domain Suspension",
-                statusClass: "bg-rose-500/10 text-rose-400 border-rose-500/30",
-                timestamp: "2 Days Ago"
-            }
-        ];
+        // Live customer queue — sample/test notices are never shown to regular users.
+        let escalationQueue = [];
+        const DEMO_TOKEN = 'demo_token_xyz_12345';
 
         let activeTab = 'landing';
         let wizardCurrentStep = 1;
-        let adminAccessToken = null;
-        let customerAccessToken = null;
-        let pendingPasswordResetToken = null;
+        let currentSessionUser = null;
 
         // INITIALIZATION ON PAGE LOAD
         function safeInit(label, fn) {
@@ -1600,6 +1568,18 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             targets.forEach(({ el, withStatus }) => {
                 if (!el) return;
                 el.replaceChildren();
+                if (!escalationQueue.length) {
+                    const emptyRow = document.createElement('tr');
+                    const td = document.createElement('td');
+                    td.colSpan = withStatus ? 5 : 4;
+                    td.className = 'p-4 text-slate-400';
+                    td.textContent = isAdminSession()
+                        ? 'No pending admin notices.'
+                        : 'No active notices yet. New detections will appear here.';
+                    emptyRow.appendChild(td);
+                    el.appendChild(emptyRow);
+                    return;
+                }
                 escalationQueue.forEach(item => {
                     const row = document.createElement('tr');
                     const cell = (text, className) => {
@@ -1641,23 +1621,14 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             safeInit('categories', () => selectCategory('ecom'));
             safeInit('subcategories', updateSubcatOptions);
             safeInit('queue', renderDashboardQueue);
-            safeInit('password reset link', () => {
-                if (window.location.hash.startsWith('#reset-password=')) {
-                    pendingPasswordResetToken = window.location.hash.slice('#reset-password='.length);
-                    if (pendingPasswordResetToken) {
-                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-                        toggleAuthModal(true, 'reset');
-                        showAuthStatus('Choose a new password to finish resetting your account.');
-                    }
-                }
-            });
+            safeInit('auth session', () => { restoreSupabaseSession(); });
         };
 
         // NAVIGATION TAB SWITCHER
         const ACTIVE_NAV_CLASS = "nav-btn nav-active px-4 py-2 rounded-lg text-sm font-medium transition-all bg-slate-900 text-white dark:bg-cyan-400 dark:text-slate-950";
 
         function switchTab(tabId) {
-            if (tabId === 'dashboard' && !adminAccessToken && !hasActiveSession()) {
+            if (tabId === 'dashboard' && !hasActiveSession()) {
                 toggleAuthModal(true);
                 return;
             }
@@ -1781,12 +1752,12 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
         }
 
         function switchAuthView(view) {
-            const views = ['login', 'signup', 'forgot', 'reset'];
+            const views = ['login', 'signup', 'forgot'];
             if (!views.includes(view)) view = 'login';
             showAuthStatus('');
 
             views.forEach(authView => {
-                const el = document.getElementById(authView === 'reset' ? 'form-reset-password' : `form-${authView}`);
+                const el = document.getElementById(`form-${authView}`);
                 if (el) el.classList.toggle('hidden', authView !== view);
             });
 
@@ -1804,7 +1775,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 const forgotEmail = document.getElementById('forgot-email');
                 if (loginEmail && forgotEmail) forgotEmail.value = loginEmail.value;
             }
-            const focusTargets = { login: 'login-email', signup: 'signup-name', forgot: 'forgot-email', reset: 'reset-password' };
+            const focusTargets = { login: 'login-email', signup: 'signup-name', forgot: 'forgot-email' };
             window.setTimeout(() => {
                 const target = document.getElementById(focusTargets[view]);
                 if (target) target.focus();
@@ -1829,11 +1800,109 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             } catch (e) { return ''; }
         }
 
-        function hasActiveSession() {
+        function isAdminUser(user) {
+            if (!user) return false;
+            const role = user.app_metadata?.role;
+            return role === 'admin' || role === 'legal';
+        }
+
+        function isAdminSession() {
+            return isAdminUser(currentSessionUser);
+        }
+
+        function storedUser() {
             try {
                 const user = JSON.parse(localStorage.getItem('ag_user') || 'null');
-                return !!(user && user.email);
-            } catch (e) { return false; }
+                if (user && user.email && user.role !== 'demo') return user;
+            } catch (e) { /* corrupted entry */ }
+            return null;
+        }
+
+        function hasActiveSession() {
+            return !!(currentSessionUser && currentSessionUser.email);
+        }
+
+        function persistLocalUser(user) {
+            if (!user || !user.email) {
+                localStorage.removeItem('ag_user');
+                localStorage.removeItem('ag_token');
+                return;
+            }
+            localStorage.setItem('ag_user', JSON.stringify({
+                id: user.id || '',
+                email: user.email,
+                store_name: user.user_metadata?.store_name || user.user_metadata?.full_name || user.store_name || '',
+                role: isAdminUser(user) ? user.app_metadata.role : 'customer'
+            }));
+            const token = localStorage.getItem('ag_token');
+            if (!token || token === DEMO_TOKEN) localStorage.removeItem('ag_token');
+        }
+
+        function resetDashboardState() {
+            escalationQueue = [];
+            const zeros = { 'stat-scans': '0', 'stat-threats': '0', 'stat-notices': '0', 'stat-sites': '0 Active', 'stat-success': '—' };
+            Object.keys(zeros).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = zeros[id];
+            });
+            const adminBody = document.getElementById('admin-notices-table-body');
+            if (adminBody) adminBody.replaceChildren();
+        }
+
+        function applySessionUser(user) {
+            const nextUser = user && user.email ? user : null;
+            const changed = (nextUser && nextUser.id) !== (currentSessionUser && currentSessionUser.id);
+            currentSessionUser = nextUser;
+            if (changed) resetDashboardState();
+            persistLocalUser(currentSessionUser);
+            applyDashboardForRole();
+            checkAuthState();
+        }
+
+        function applyDashboardForRole() {
+            const adminPanel = document.getElementById('admin-notice-panel');
+            const loginBtn = document.getElementById('admin-login-button');
+            const user = currentSessionUser;
+            if (adminPanel) {
+                if (isAdminSession()) adminPanel.classList.remove('hidden');
+                else adminPanel.classList.add('hidden');
+            }
+            if (loginBtn) loginBtn.classList.toggle('hidden', !!user);
+            const brand = document.getElementById('dash-brand-name');
+            if (brand) {
+                brand.textContent = user
+                    ? (user.user_metadata?.store_url || user.user_metadata?.store_name || user.user_metadata?.full_name || user.email)
+                    : 'Your Store';
+            }
+            if (!isAdminSession() && activeTab === 'dashboard') {
+                const queuePanel = document.getElementById('dash-sec-queue');
+                if (queuePanel && !queuePanel.classList.contains('hidden')) switchDashTab('overview');
+            }
+            renderDashboardQueue();
+        }
+
+        async function getAuthModule() {
+            return import('./src/supabase.js');
+        }
+
+        async function restoreSupabaseSession() {
+            try {
+                const cached = storedUser();
+                const token = localStorage.getItem('ag_token');
+                if (token === DEMO_TOKEN || (cached && cached.role === 'demo')) {
+                    localStorage.removeItem('ag_token');
+                    localStorage.removeItem('ag_user');
+                }
+                const { getCurrentSession, onAuthStateChange } = await getAuthModule();
+                const session = await getCurrentSession();
+                applySessionUser(session?.user || null);
+                onAuthStateChange((nextSession) => {
+                    applySessionUser(nextSession?.user || null);
+                });
+            } catch (err) {
+                console.error('Could not restore session:', err);
+                applySessionUser(null);
+            }
         }
 
         function openPortal() {
@@ -1962,11 +2031,17 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             nextWizardStep(1);
         }
 
+        async function requestPasswordReset(email) {
+            if (!email || !email.includes('@')) throw new Error('Enter a valid email address.');
+            const { handlePasswordReset } = await getAuthModule();
+            await handlePasswordReset(email);
+        }
+
         async function handleAuthSubmit(event, type) {
             event.preventDefault();
             const payload = { action: type };
             if (type === 'login') {
-                payload.email = document.getElementById('login-email').value;
+                payload.email = document.getElementById('login-email').value.trim().toLowerCase();
                 payload.password = document.getElementById('login-password').value;
             } else if (type === 'signup') {
                 payload.name = document.getElementById('signup-name').value;
@@ -1978,64 +2053,57 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 payload.email = document.getElementById('signup-email').value.trim().toLowerCase();
                 payload.password = document.getElementById('signup-password').value;
             } else if (type === 'forgot') {
-                payload.email = document.getElementById('forgot-email').value;
+                payload.email = document.getElementById('forgot-email').value.trim().toLowerCase();
             }
 
             try {
                 if (type === 'forgot') {
-                    const resetEmail = payload.email.trim().toLowerCase();
                     try {
-                        const { handlePasswordReset } = await import('./src/supabase.js');
-                        await handlePasswordReset(resetEmail);
+                        await requestPasswordReset(payload.email);
                     } catch (resetError) {
-                        console.error('Supabase password reset failed:', resetError);
+                        console.error('Password reset failed:', resetError);
                         throw new Error(resetError.message || 'Could not send password reset email. Please try again later.');
                     }
                     alert('If an account exists for that email, a password reset link has been sent.');
                     toggleAuthModal(false);
                     return;
                 }
+
+                const auth = await getAuthModule();
+                let sessionUser = null;
                 if (type === 'signup') {
                     const availability = await fetch('/api/v1/auth/check-availability', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ email: payload.email, store_url: payload.store_url })
-                    });
-                    if (!availability.ok) {
+                    }).catch(() => null);
+                    if (availability && availability.status === 400) {
                         const info = await availability.json().catch(() => ({}));
                         throw new Error(info.detail || 'This email or store URL is already registered.');
                     }
-                    const { handleSignUp } = await import('./src/supabase.js');
-                    await handleSignUp(payload.email, payload.password, payload.name);
+                    const data = await auth.handleSignUp(payload.email, payload.password, payload.name, payload.store_url);
+                    sessionUser = data?.session?.user || data?.user || null;
+                    fetch('/api/v1/auth/register', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    }).catch((err) => console.error('Welcome notify failed:', err));
+                    if (!data?.session) {
+                        applySessionUser(null);
+                        toggleAuthModal(false);
+                        alert('Account created. Check your email to confirm your address, then sign in.');
+                        return;
+                    }
+                } else {
+                    const data = await auth.handleSignIn(payload.email, payload.password);
+                    sessionUser = data?.session?.user || data?.user || null;
+                    if (!sessionUser) throw new Error('Sign in failed. Please try again.');
                 }
 
-                const endpoint = type === 'signup' ? '/api/v1/auth/register' : '/api/index';
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    throw new Error(data.detail || data.message || 'An error occurred. Please try again.');
-                }
-                if (type === 'forgot') {
-                    alert('Password reset link sent! Please check your inbox.');
-                    toggleAuthModal(false);
-                    return;
-                }
-                const token = data.token || data.access_token;
-                if (token) {
-                    const user = data.user || {};
-                    localStorage.setItem('ag_token', token);
-                    localStorage.setItem('ag_user', JSON.stringify({
-                        email: user.email || payload.email,
-                        store_name: user.store_name || user.name || payload.name || ''
-                    }));
-                }
+                applySessionUser(sessionUser);
                 toggleAuthModal(false);
-                checkAuthState();
-                if (token && (type === 'login' || type === 'signup')) switchTab('dashboard');
+                if (!isAdminSession()) switchDashTab('overview');
+                switchTab('dashboard');
             } catch (err) {
                 const message = err.message || 'Authentication failed. Please try again.';
                 alert(message);
@@ -2043,14 +2111,15 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
         }
 
         function checkAuthState() {
-            let user = null;
-            try { user = JSON.parse(localStorage.getItem('ag_user') || 'null'); } catch (e) { /* corrupted entry */ }
+            const user = currentSessionUser;
             const authBtn = document.getElementById('nav-auth-btn');
             const profileNav = document.getElementById('nav-user-profile');
             if (!user || !user.email) {
                 if (authBtn) authBtn.classList.remove('hidden');
                 if (profileNav) profileNav.classList.add('hidden');
                 if (profileNav) profileNav.classList.remove('flex');
+                const startBtn = document.querySelector('button[onclick="startTrial()"]');
+                if (startBtn) startBtn.textContent = 'Start Free Trial';
                 return;
             }
             if (authBtn) authBtn.classList.add('hidden');
@@ -2060,7 +2129,8 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 profileNav.innerHTML = '';
                 const badge = document.createElement('span');
                 badge.className = 'px-3 py-1.5 rounded-lg border border-cyber-cyan/30 bg-cyber-cyan/10 text-cyber-cyan text-xs font-semibold max-w-[160px] truncate';
-                badge.textContent = user.store_name || user.email;
+                const storeName = user.user_metadata?.store_name || user.user_metadata?.full_name || user.store_name || user.email;
+                badge.textContent = storeName;
                 badge.title = user.email;
                 const out = document.createElement('button');
                 out.type = 'button';
@@ -2073,10 +2143,29 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             }
         }
 
-        function handleLogout() {
+        async function handleLogout() {
+            try {
+                const { handleSignOut } = await getAuthModule();
+                await handleSignOut();
+            } catch (err) {
+                console.error('Sign out failed:', err);
+            }
+            applySessionUser(null);
             localStorage.removeItem('ag_token');
             localStorage.removeItem('ag_user');
             window.location.reload();
+        }
+
+        async function loadAdminNotices() {
+            const status = document.getElementById('admin-notice-status');
+            const tableBody = document.getElementById('admin-notices-table-body');
+            if (!isAdminSession()) {
+                if (status) status.textContent = 'Admin access required.';
+                if (tableBody) tableBody.replaceChildren();
+                return;
+            }
+            if (status) status.textContent = 'No pending notices.';
+            if (tableBody) tableBody.replaceChildren();
         }
 
         document.addEventListener('DOMContentLoaded', checkAuthState);
