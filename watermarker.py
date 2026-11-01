@@ -72,13 +72,14 @@ class DownloadError(Exception):
 
 # --- Low-level helpers ---------------------------------------------------------
 
-def _load_rgb(image_path: str) -> np.ndarray:
-    """Load an image as an RGB uint8 array, applying EXIF orientation.
+def _load_rgb(image_path: str | bytes) -> np.ndarray:
+    """Load an image (file path or raw bytes) as an RGB uint8 array, applying EXIF orientation.
 
     Raises ImageProcessingError for corrupt files and decompression bombs.
     """
     try:
-        with Image.open(image_path) as img:
+        source = io.BytesIO(image_path) if isinstance(image_path, (bytes, bytearray)) else image_path
+        with Image.open(source) as img:
             width, height = img.size
             if width * height > MAX_IMAGE_PIXELS:
                 raise ImageProcessingError(
@@ -386,6 +387,28 @@ def _download_image(url: str, dest_path: str) -> None:
         raise DownloadError(f"Too many redirects for {url}")
     finally:
         session.close()
+
+
+def process_image_in_memory(
+    image_bytes: bytes, brand_signature: str = DEFAULT_PAYLOAD_ID
+) -> tuple[bytes, str]:
+    """Sanitize + watermark an image entirely in memory (no disk writes).
+
+    Returns (processed_png_bytes, phash_hex). PNG is used so the watermark is not
+    degraded by an extra lossy encode. Raises ImageProcessingError on bad input.
+    """
+    if not brand_signature:
+        raise ValueError("brand_signature must be a non-empty string")
+    if len(image_bytes) > MAX_DOWNLOAD_BYTES:
+        raise ImageProcessingError(f"Image exceeds {MAX_DOWNLOAD_BYTES} bytes")
+    rgb = _load_rgb(image_bytes)
+    try:
+        marked = _embed_array(_sanitize_array(rgb), brand_signature)
+    except cv2.error as exc:
+        raise ImageProcessingError(f"Processing failed: {exc}") from exc
+    buffer = io.BytesIO()
+    Image.fromarray(marked, "RGB").save(buffer, "PNG", optimize=True)
+    return buffer.getvalue(), _phash(marked)
 
 
 def process_store_catalog(
