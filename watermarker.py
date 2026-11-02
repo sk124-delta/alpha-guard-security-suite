@@ -411,6 +411,15 @@ def process_image_in_memory(
     return buffer.getvalue(), _phash(marked)
 
 
+def process_digital_asset_or_code(content_string: str) -> dict[str, str]:
+    """Return a SHA-256 fingerprint for digital asset text or source code."""
+    return {
+        "status": "success",
+        "asset_fingerprint": hashlib.sha256(content_string.encode("utf-8")).hexdigest(),
+        "media_type": "digital_asset_code",
+    }
+
+
 def process_store_catalog(
     image_urls: list[str],
     output_dir: str,

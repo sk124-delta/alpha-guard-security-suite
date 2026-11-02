@@ -1,9 +1,13 @@
 from dataclasses import asdict, dataclass
 from html import escape
+import ipaddress
 import os
+import re
+import socket
 from urllib.parse import urlsplit
 
 import requests
+import whois
 
 
 RESEND_API_URL = "https://api.resend.com/emails"
@@ -19,6 +23,54 @@ class DmcaDeliveryUnknownError(DmcaDeliveryError):
 
 class DmcaProviderRejectedError(DmcaDeliveryError):
     pass
+
+
+class WhoisLookupError(RuntimeError):
+    pass
+
+
+def lookup_whois_contact(domain: str) -> str | None:
+    hostname = domain.strip().rstrip(".").encode("idna").decode("ascii").lower()
+    try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        pass
+    else:
+        raise ValueError("WHOIS contact lookup requires a domain name, not an IP address.")
+
+    labels = hostname.split(".")
+    if (
+        len(labels) < 2
+        or len(hostname) > 253
+        or any(
+            not label
+            or len(label) > 63
+            or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label)
+            for label in labels
+        )
+    ):
+        raise ValueError("A valid domain name is required for WHOIS contact lookup.")
+
+    try:
+        record = whois.whois(hostname, inc_raw=True, quiet=True)
+    except (OSError, socket.timeout, TimeoutError, whois.parser.PywhoisError) as exc:
+        raise WhoisLookupError("WHOIS contact lookup failed.") from exc
+
+    raw_record = record.get("raw") if hasattr(record, "get") else None
+    if isinstance(raw_record, str) and raw_record.startswith("Socket not responding:"):
+        raise WhoisLookupError("WHOIS contact lookup failed.")
+
+    for field in ("abuse_email", "abuse_contact_email", "emails", "email"):
+        value = record.get(field) if hasattr(record, "get") else getattr(record, field, None)
+        candidates = value if isinstance(value, (list, tuple, set)) else [value]
+        for candidate in candidates:
+            if not isinstance(candidate, str):
+                continue
+            try:
+                return _validate_email_address(candidate)
+            except ValueError:
+                continue
+    return None
 
 
 def get_resend_settings() -> tuple[str, str]:
@@ -124,7 +176,10 @@ def create_dmca_notice_draft(
     original_asset_url: str,
     sender_email: str | None = None,
     store_domain: str | None = None,
+    recipient_source: str = "provided",
 ) -> dict[str, str]:
+    if recipient_source not in {"provided", "whois"}:
+        raise ValueError("recipient_source must be 'provided' or 'whois'.")
     recipient = _validate_email_address(host_abuse_email)
     sender = _validate_email_address(
         sender_email
@@ -137,6 +192,13 @@ def create_dmca_notice_draft(
     safe_infringing_url = escape(infringing_url, quote=True)
     safe_asset_url = escape(asset_url, quote=True)
     safe_store_domain = escape(store_domain or urlsplit(infringing_url).hostname or "", quote=True)
+    recipient_note = (
+        "<p><strong>Recipient note:</strong> This address was suggested "
+        "from WHOIS registration data and is not verified as an abuse contact. "
+        "Confirm the recipient before dispatch.</p>"
+        if recipient_source == "whois"
+        else ""
+    )
 
     draft = DmcaNoticeDraft(
         recipient=recipient,
@@ -159,6 +221,9 @@ def create_dmca_notice_draft(
             "appropriate action under your applicable policies and legal obligations.</p>"
             "<p>Please direct any response to the AlphaGuard Legal Enforcement Team "
             f"at {escape(sender, quote=True)}.</p>"
+            f"{recipient_note}"
         ),
     )
-    return asdict(draft)
+    result = asdict(draft)
+    result["recipient_source"] = recipient_source
+    return result

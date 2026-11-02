@@ -10,9 +10,9 @@ from ipaddress import ip_address
 from urllib.parse import urljoin, urlsplit
 
 import requests
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, create_engine
@@ -45,11 +45,20 @@ from customer_auth import (
 from dmca_dispatcher import (
     DmcaDeliveryUnknownError,
     DmcaProviderRejectedError,
+    WhoisLookupError,
     create_dmca_notice_draft,
     get_resend_settings,
+    lookup_whois_contact,
     send_dmca_notice,
 )
 from scanner import _validate_public_url, compare_hashes, compute_image_hash
+from watermarker import (
+    DEFAULT_PAYLOAD_ID,
+    MAX_DOWNLOAD_BYTES,
+    ImageProcessingError,
+    process_digital_asset_or_code,
+    process_image_in_memory,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +125,7 @@ class ScanRequestSchema(BaseModel):
     target_infringing_url: HttpUrl
     infringing_image_url: HttpUrl
     original_image_url: HttpUrl
-    host_abuse_email: str
+    host_abuse_email: str | None = None
 
 
 class DispatchNoticeSchema(BaseModel):
@@ -125,6 +134,10 @@ class DispatchNoticeSchema(BaseModel):
 
 class DomainInspectionSchema(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
+
+
+class DigitalAssetFingerprintSchema(BaseModel):
+    content_string: str = Field(max_length=1_000_000)
 
 
 class _PageInspector(HTMLParser):
@@ -276,6 +289,7 @@ if frontend_origins:
         allow_credentials=False,
         allow_methods=["GET", "POST"],
         allow_headers=["Authorization", "Content-Type"],
+        expose_headers=["X-AlphaGuard-Perceptual-Hash", "X-AlphaGuard-Payload-Id"],
     )
 
 
@@ -374,6 +388,44 @@ def inspect_domain(data: DomainInspectionSchema):
         "price": price,
         "plan_id": recommended_plan_id,
     }
+
+
+@app.post(
+    "/api/v1/protection/process-image",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"image/png": {}},
+            "description": "Sanitized, watermarked PNG. Metadata is returned in response headers.",
+        }
+    },
+)
+def process_protected_image(image_file: UploadFile = File(...)):
+    image_bytes = image_file.file.read(MAX_DOWNLOAD_BYTES + 1)
+    if len(image_bytes) > MAX_DOWNLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Image exceeds the maximum allowed size.")
+
+    try:
+        processed_image, phash_signature = process_image_in_memory(
+            image_bytes, DEFAULT_PAYLOAD_ID
+        )
+    except ImageProcessingError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return Response(
+        content=processed_image,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": 'attachment; filename="alphaguard-watermarked.png"',
+            "X-AlphaGuard-Perceptual-Hash": phash_signature,
+            "X-AlphaGuard-Payload-Id": DEFAULT_PAYLOAD_ID,
+        },
+    )
+
+
+@app.post("/api/v1/protection/fingerprint-digital-asset")
+def fingerprint_digital_asset(data: DigitalAssetFingerprintSchema):
+    return process_digital_asset_or_code(data.content_string)
 
 
 @app.post("/api/v1/detect-category")
@@ -774,12 +826,37 @@ def execute_automated_scan(data: ScanRequestSchema, db: Session = Depends(get_db
     notice_draft = None
     notice_id = None
     if similarity >= 90.0:
+        recipient_source = "provided"
+        host_abuse_email = data.host_abuse_email
+        if not host_abuse_email:
+            target_domain = urlsplit(str(data.target_infringing_url)).hostname
+            if not target_domain:
+                raise HTTPException(
+                    status_code=422,
+                    detail="A valid target domain is required to look up a WHOIS contact.",
+                )
+            try:
+                host_abuse_email = lookup_whois_contact(target_domain)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            except WhoisLookupError as exc:
+                raise HTTPException(
+                    status_code=502,
+                    detail="WHOIS lookup failed; provide a contact email to create the draft.",
+                ) from exc
+            if not host_abuse_email:
+                raise HTTPException(
+                    status_code=422,
+                    detail="No email was listed in WHOIS data; provide a recipient to create the draft.",
+                )
+            recipient_source = "whois"
         try:
             notice_draft = create_dmca_notice_draft(
-                host_abuse_email=data.host_abuse_email,
+                host_abuse_email=host_abuse_email,
                 target_infringing_url=str(data.target_infringing_url),
                 original_asset_url=str(data.original_image_url),
                 store_domain=store.store_url,
+                recipient_source=recipient_source,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
