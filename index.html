@@ -934,7 +934,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                         <p id="rec-plan-assets" class="text-xs text-slate-300 light:text-slate-600 mt-2"></p>
                         <p id="rec-plan-category" class="text-xs text-slate-300 light:text-slate-600 mt-1"></p>
                         <p id="rec-plan-reason" class="text-xs text-slate-300 light:text-slate-600 mt-2">Inspect your public store to receive a recommendation.</p>
-                        <a id="rec-plan-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 px-5 py-2.5 rounded-xl bg-cyber-cyan text-cyber-black font-bold text-sm hover:bg-cyber-cyandark transition-all">Continue to checkout</a>
+                        <a id="rec-plan-link" href="#page-dashboard" onclick="continueToCheckout(event)" class="inline-block mt-4 px-5 py-2.5 rounded-xl bg-cyber-cyan text-cyber-black font-bold text-sm hover:bg-cyber-cyandark transition-all">Continue to checkout</a>
                     </div>
 
                     <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs light:bg-slate-100 light:border-slate-300">
@@ -1912,6 +1912,25 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
         function openPortal() {
             if (hasActiveSession()) switchTab('dashboard');
             else toggleAuthModal(true);
+        }
+
+        function continueToCheckout(event) {
+            if (event) event.preventDefault();
+            completeTrialSetup();
+        }
+
+        function completeTrialSetup() {
+            const status = document.getElementById('trial-setup-status');
+            if (!hasActiveSession()) {
+                if (status) {
+                    status.textContent = 'Create an account or sign in to continue.';
+                    status.classList.remove('hidden');
+                }
+                toggleAuthModal(true, 'signup');
+                return;
+            }
+            if (status) status.classList.add('hidden');
+            switchTab('dashboard');
         }
 
         function startTrial() {
