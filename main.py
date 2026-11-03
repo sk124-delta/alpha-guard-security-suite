@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import json
 import logging
 import os
@@ -12,7 +13,7 @@ from urllib.parse import urljoin, urlsplit
 from dotenv import load_dotenv
 
 import requests
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials
@@ -62,6 +63,7 @@ from scanner import (
     compare_hashes,
     compute_image_hash,
     public_only_session,
+    run_scheduled_scans,
 )
 from watermarker import (
     DEFAULT_PAYLOAD_ID,
@@ -946,6 +948,21 @@ def auto_dispatch_notice(db: Session, notice_id: str) -> str:
         notice.provider_message_id = provider_message_id
     db.commit()
     return notice.status
+
+
+@app.post("/api/v1/trigger-scan")
+def trigger_automated_scan(authorization: str | None = Header(None)):
+    expected = os.getenv("ALPHAGUARD_SCAN_TRIGGER_TOKEN", "")
+    if not expected or not hmac.compare_digest(authorization or "", f"Bearer {expected}"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        summary = run_scheduled_scans(
+            SessionLocal, StoreModel, NoticeModel, _fetch_public_page, create_dmca_notice_draft, lookup_whois_contact
+        )
+    except Exception:
+        logger.exception("Scheduled scan failed")
+        raise HTTPException(status_code=500, detail="Scan failed")
+    return {"status": "success", **summary}
 
 
 @app.post("/api/v1/scan/execute-takedown")

@@ -1,5 +1,7 @@
 from io import BytesIO
 import ipaddress
+import json
+import logging
 import os
 import socket
 from urllib.parse import urlsplit
@@ -18,6 +20,10 @@ MAX_IMAGE_BYTES = 10 * 1024 * 1024
 REQUEST_TIMEOUT = (3, 10)
 SERPAPI_ENDPOINT = "https://serpapi.com/search"
 SERPAPI_TIMEOUT = (5, 30)
+MAX_IMAGES_PER_STORE = 5
+MATCH_THRESHOLD = 90.0
+
+logger = logging.getLogger("alphaguard.scanner")
 
 
 def _open_public_socket(conn):
@@ -177,6 +183,85 @@ def search_web_for_matches(image_url: str, api_key: str | None = None, max_resul
         if len(matches) >= max_results:
             break
     return matches
+
+
+def run_scheduled_scans(session_factory, store_model, notice_model, fetch_page, draft_notice, find_contact) -> dict:
+    """Scan every connected store's public Shopify catalog and queue PENDING DMCA drafts.
+
+    Dependencies are injected by main.py to avoid a circular import. Notices are never dispatched here.
+    """
+    summary = {"stores": 0, "images": 0, "notices": 0, "errors": 0}
+    db = session_factory()
+    try:
+        for store in db.query(store_model).all():
+            summary["stores"] += 1
+            try:
+                base = f"https://{store.store_url}" if "://" not in store.store_url else store.store_url
+                body, ctype = fetch_page(base.rstrip("/") + "/products.json?limit=50")
+                if "json" not in ctype:
+                    continue
+                products = json.loads(body).get("products", [])
+                originals = [
+                    p["images"][0]["src"] for p in products if p.get("images") and p["images"][0].get("src")
+                ][:MAX_IMAGES_PER_STORE]
+                own_host = urlsplit(base).hostname
+
+                for original in originals:
+                    summary["images"] += 1
+                    try:
+                        original_hash = compute_image_hash(original)
+                        matches = search_web_for_matches(original)
+                    except (ValueError, RuntimeError, OSError, requests.RequestException):
+                        summary["errors"] += 1
+                        logger.warning("Skipped image for store %s", store.id, exc_info=True)
+                        continue
+                    for match in matches:
+                        host = urlsplit(match["url"]).hostname
+                        if not host or host == own_host or host.endswith("." + own_host):
+                            continue
+                        try:
+                            similarity = compare_hashes(original_hash, compute_image_hash(match["url"]))
+                            if similarity < MATCH_THRESHOLD:
+                                continue
+                            exists = db.query(notice_model).filter_by(
+                                store_id=store.id, target_infringing_url=match["url"], original_asset_url=original
+                            ).first()
+                            if exists:
+                                continue
+                            contact = find_contact(host)
+                            if not contact:
+                                continue
+                            draft = draft_notice(
+                                host_abuse_email=contact,
+                                target_infringing_url=match["url"],
+                                original_asset_url=original,
+                                store_domain=store.store_url,
+                                recipient_source="whois",
+                            )
+                            db.add(notice_model(
+                                store_id=store.id,
+                                similarity_score=similarity,
+                                target_infringing_url=match["url"],
+                                original_asset_url=original,
+                                recipient=draft["recipient"],
+                                sender=draft["sender"],
+                                subject=draft["subject"],
+                                body_html=draft["html"],
+                                status="PENDING",
+                            ))
+                            summary["notices"] += 1
+                        except Exception:
+                            summary["errors"] += 1
+                            logger.warning("Skipped match for store %s", store.id, exc_info=True)
+                store.scans_performed = (store.scans_performed or 0) + 1
+                db.commit()
+            except Exception:
+                db.rollback()
+                summary["errors"] += 1
+                logger.exception("Scan failed for store %s", store.id)
+    finally:
+        db.close()
+    return summary
 
 
 def compare_hashes(hash1_str: str, hash2_str: str) -> float:
