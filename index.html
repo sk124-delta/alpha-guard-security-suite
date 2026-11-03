@@ -22,16 +22,26 @@
             theme: {
                 extend: {
                     colors: {
-                        slate: { 900: '#19102d', 950: '#100a1d' },
-                        brand: { DEFAULT: '#a569bd', light: '#c39bd3', dark: '#8e44ad', darker: '#6c3483' },
+                        slate: {
+                            700: '#2a4372',
+                            800: '#1a3260',
+                            900: 'rgb(var(--card-rgb) / <alpha-value>)',
+                            950: 'rgb(var(--bg-rgb) / <alpha-value>)'
+                        },
+                        brand: {
+                            DEFAULT: 'rgb(var(--accent-rgb) / <alpha-value>)',
+                            light: 'rgb(var(--accent-hover-rgb) / <alpha-value>)',
+                            dark: 'rgb(var(--accent-rgb) / <alpha-value>)',
+                            darker: 'rgb(var(--accent-hover-rgb) / <alpha-value>)'
+                        },
                         cyber: {
-                            navy: '#100a1d',
-                            darknavy: '#0b132b',
-                            black: '#100a1d',
-                            cyan: '#00f0ff',
-                            cyandark: '#00b8cc',
-                            card: '#19102d',
-                            border: '#32214f'
+                            navy: 'rgb(var(--bg-rgb) / <alpha-value>)',
+                            darknavy: 'rgb(var(--bg-rgb) / <alpha-value>)',
+                            black: 'rgb(var(--bg-rgb) / <alpha-value>)',
+                            cyan: 'rgb(var(--accent-rgb) / <alpha-value>)',
+                            cyandark: 'rgb(var(--accent-hover-rgb) / <alpha-value>)',
+                            card: 'rgb(var(--card-rgb) / <alpha-value>)',
+                            border: 'var(--border)'
                         }
                     },
                     fontFamily: {
@@ -46,182 +56,90 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* ---- Design tokens ---- */
+        :root, html.dark {
+            color-scheme: dark;
+            --bg: #0b1b33; --card: #12264a; --accent: #22d3ee; --text: #f2f5fa; --muted: #b8c4d9;
+            --border: rgba(255, 255, 255, .12);
+            --success: #22c55e; --warning: #f59e0b; --danger: #ef4444;
+            --on-accent: #0b1b33; --on-danger: #0b1b33; --accent-hover: #67e8f9;
+            --surface-alt: rgba(255, 255, 255, .06); --dot: rgba(34, 211, 238, .16);
+            --bg-rgb: 11 27 51; --card-rgb: 18 38 74; --accent-rgb: 34 211 238; --accent-hover-rgb: 103 232 249;
+        }
+        html.light {
+            color-scheme: light;
+            --bg: #f4f7fa; --card: #ffffff; --accent: #0e7490; --text: #0b1b33; --muted: #4a5a70;
+            --border: rgba(11, 27, 51, .14);
+            --success: #15803d; --warning: #b45309; --danger: #b91c1c;
+            --on-accent: #ffffff; --on-danger: #ffffff; --accent-hover: #155e75;
+            --surface-alt: rgba(11, 27, 51, .05); --dot: rgba(14, 116, 144, .14);
+            --bg-rgb: 244 247 250; --card-rgb: 255 255 255; --accent-rgb: 14 116 144; --accent-hover-rgb: 21 94 117;
+        }
+
+        /* ---- Base surfaces (override legacy arbitrary-value utilities) ---- */
+        html body#appBody { background-color: var(--bg); color: var(--text); }
+        html[class] [class~="bg-[#f5f3fa]"], html[class] [class~="dark:bg-[#1d1235]"], html[class] [class~="dark:bg-[#100a1d]"] { background-color: var(--card); }
+        html[class] [class~="border-[#e2dcf2]"], html[class] [class~="light:border-[#e2dcf2]"], html[class] [class~="dark:border-[#32214f]"],
+        html[class] [class~="dark:border-[#32214f]/80"] { border-color: var(--border); }
+        html[class] header[class] { background-color: color-mix(in srgb, var(--card) 92%, transparent); border-color: var(--border); }
+        html[class] footer[class] { background-color: var(--card); border-color: var(--border); color: var(--muted); }
+        html[class] .hero-banner { background-color: var(--card); border-color: var(--border); }
+        html .bg-slate-800, html .bg-slate-700 { color: var(--text); }
+        html .border-slate-800, html .border-slate-700 { border-color: var(--border); }
+        html .divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
+
+        /* ---- Text ---- */
+        :where(h1, h2, h3, h4) { color: var(--text); }
+        html main p:not([class*="text-"]) { color: var(--muted); }
+        html .text-slate-500, html .text-slate-600, html .text-slate-700 { color: var(--muted); }
+        html.dark .text-slate-400 { color: var(--muted); }
+        html.light .text-white, html.light .text-slate-100, html.light .text-slate-200,
+        html.light .text-slate-800, html.light .text-slate-900,
+        html.light .hover\:text-white:hover { color: var(--text) !important; }
+        html.light .text-slate-300, html.light .text-slate-400 { color: var(--muted) !important; }
+        html.light .text-cyan-400 { color: var(--accent) !important; }
+
+        /* ---- Status colors ---- */
+        html .text-emerald-400, html .text-emerald-500 { color: var(--success); }
+        html .text-amber-300, html .text-amber-400, html .text-amber-500, html .text-yellow-300, html .text-yellow-400 { color: var(--warning); }
+        html .text-red-400, html .text-rose-400 { color: var(--danger); }
+        html .border-rose-500\/40, html .border-red-500\/40 { border-color: var(--danger); }
+
+        /* ---- Single accent: legacy purple/indigo utilities resolve to cyan ---- */
+        html .text-purple-500, html .text-purple-600, html .text-indigo-400,
+        html.dark .dark\:text-purple-400, html.dark .dark\:text-purple-500 { color: var(--accent); }
+        html [class~="bg-indigo-500/10"] { background-color: rgb(var(--accent-rgb) / .12); }
+        html [class~="border-indigo-500/20"] { border-color: rgb(var(--accent-rgb) / .3); }
+
+        /* ---- Accent buttons: readable text on the accent fill ---- */
+        html.light .bg-cyber-cyan, html.light .bg-brand, html.light .bg-brand-dark,
+        html.light .card-btn, html.light .auth-submit-button { color: var(--on-accent) !important; font-weight: 700; }
+        html.light .card-btn, html.light .auth-submit-button { background-color: var(--accent) !important; }
+        html.light .card-btn:hover, html.light .auth-submit-button:hover { background-color: var(--accent-hover) !important; }
+        html.light .hover\:bg-cyber-cyandark:hover, html.light .hover\:bg-brand-darker:hover { background-color: var(--accent-hover) !important; }
+        html.light .nav-btn.nav-active { background-color: var(--text) !important; border-color: var(--text) !important; color: var(--bg) !important; }
+        html.light .bg-slate-800, html.light .bg-slate-700 { background-color: var(--surface-alt) !important; }
+        html.light .hover\:bg-slate-800:hover:not(.card-btn), html.light .hover\:bg-slate-700:hover,
+        html.light .hover\:bg-slate-800\/50:hover { background-color: var(--surface-alt) !important; }
+
+        /* ---- Focus ---- */
+        html :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+            outline: 2px solid var(--accent) !important;
+            outline-offset: 2px;
+        }
+        .sr-only-focus { position: absolute; left: -9999px; }
+        .sr-only-focus:focus { left: 1rem; top: 1rem; z-index: 100; padding: .5rem 1rem; border-radius: .5rem; background: var(--accent); color: var(--on-accent); }
+
         /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(16, 10, 29, 0.6);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #32214f;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #00f0ff;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-        /* Glows and Effects */
-        .glow-cyan {
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
-        }
-        .glow-cyan-sm {
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
-        }
-        .border-glow {
-            border-color: rgba(0, 240, 255, 0.4);
-            box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.1);
-        }
-        /* --- STUNNING & LEGIBLE LIGHT MODE THEME --- */
-        html.light body {
-            background-color: #f0eef6 !important;
-            color: #1e1b4b !important;
-        }
-
-        html.light header {
-            background-color: rgba(245, 243, 250, 0.95) !important;
-            border-color: #cbd5e1 !important;
-        }
-
-        html.light footer {
-            background-color: #f0eef6 !important;
-            border-color: #e2dcf2 !important;
-            color: #475569 !important;
-        }
-
-        html.light .hero-banner {
-            background-color: #f5f3fa !important;
-            background-image: radial-gradient(rgba(142, 68, 173, 0.28) 1px, transparent 1px) !important;
-            background-size: 24px 24px !important;
-            border-color: #cbd5e1 !important;
-        }
-
-        /* Base Containers & Cards in Light Mode */
-        html.light body#appBody {
-            background-color: #f0eef6 !important;
-        }
-
-        html.light .bg-cyber-card,
-        html.light .bg-slate-900:not(.card-btn),
-        html.light .bg-slate-900\/50,
-        html.light .bg-slate-900\/60 {
-            background-color: #f5f3fa !important;
-            border-color: #e2dcf2 !important;
-            color: #1e1b4b !important;
-            box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.06);
-        }
-
-        html.light .bg-cyber-navy,
-        html.light .bg-cyber-black,
-        html.light .bg-slate-950,
-        html.light .bg-cyber-navy\/50,
-        html.light .bg-cyber-navy\/80 {
-            background-color: #f0eef6 !important;
-            border-color: #e2dcf2 !important;
-            color: #1e1b4b !important;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-        html.light body#appBody { box-shadow: none; }
-
-        html.light .border-slate-800,
-        html.light .border-slate-700 {
-            border-color: #e2dcf2 !important;
-        }
-
-        /* Text: titles slate-900, body copy slate-600 (all AA on white / slate-50) */
-        html.light .text-white:not(.card-btn),
-        html.light .text-slate-100 {
-            color: #1e1b4b !important;
-        }
-        html.light .text-slate-200 {
-            color: #334155 !important;
-        }
-        html.light .text-slate-300,
-        html.light .text-slate-400,
-        html.light .text-slate-500 {
-            color: #475569 !important;
-        }
-        html.light .hover\:text-white:hover:not(.card-btn) {
-            color: #1e1b4b !important;
-        }
-        html.light .hover\:bg-slate-800\/50:hover {
-            background-color: #e2dcf2 !important;
-        }
-
-        /* Accent & status text: darker shades for contrast on light backgrounds */
-        html.light .text-cyber-cyan,
-        html.light .text-cyan-400 {
-            color: #6c3483 !important;
-        }
-        html.light .text-yellow-300,
-        html.light .text-yellow-400,
-        html.light .text-amber-300,
-        html.light .text-amber-400,
-        html.light .text-amber-500 {
-            color: #b45309 !important;
-        }
-        html.light .text-indigo-400 { color: #4338ca !important; }
-        html.light .text-emerald-400 { color: #047857 !important; }
-        html.light .text-red-400 { color: #b91c1c !important; }
-
-        /* Badges/pills that are dark chips in dark mode */
-        html.light span[class*="px-"][class*="bg-slate-"],
-        html.light span[class*="px-"][class*="bg-cyber-"]:not(.bg-cyber-cyan) {
-            background-color: #f4ecf7 !important;
-            color: #6c3483 !important;
-            border: 1px solid #e8daef !important;
-        }
-
-        /* Secondary buttons / chips: slate-100 / slate-700, hover slate-200 */
-        html.light .bg-slate-800,
-        html.light .bg-slate-700 {
-            background-color: #f0eef6 !important;
-            color: #334155 !important;
-            border-color: #e2dcf2 !important;
-        }
-        html.light .hover\:bg-slate-800:hover:not(.card-btn),
-        html.light .hover\:bg-slate-700:hover {
-            background-color: #e2dcf2 !important;
-        }
-
-        /* Primary buttons: brand / white, hover brand-dark */
-        html.light .bg-cyber-cyan,
-        html.light .bg-brand,
-        html.light .bg-brand-dark,
-        html.light .hover\:bg-cyber-cyan:hover {
-            background-color: #8e44ad !important;
-            color: #ffffff !important;
-            font-weight: 700;
-        }
-        html.light .hover\:bg-cyber-cyandark:hover,
-        html.light .hover\:bg-brand-dark:hover,
-        html.light .hover\:bg-brand-darker:hover {
-            background-color: #6c3483 !important;
-        }
-
-        /* Headings and body copy defaults (utility classes still win in dark mode) */
-        :where(html.light) :is(h1, h2, h3, h4) { color: #1e1b4b; }
-        :where(html.dark) :is(h1, h2, h3, h4) { color: #ffffff; }
-
-        /* Light-mode CTAs: brand-dark solid with white text (hover brand-darker) */
-        html.light .card-btn,
-        html.light .auth-submit-button {
-            background-color: #8e44ad !important;
-            color: #ffffff !important;
-            font-weight: 700;
-            box-shadow: 0 10px 15px -3px rgba(142, 68, 173, 0.3);
-        }
-        html.light .card-btn:hover,
-        html.light .auth-submit-button:hover {
-            background-color: #6c3483 !important;
-        }
-        html.light main p:not([class*="text-"]) { color: #1e1b4b; }
-        html.light .text-slate-800,
-        html.light .text-slate-900 {
-            color: #1e1b4b !important;
-        }
-        html.dark main p:not([class*="text-"]) { color: #cbd5e1; }
+        /* Glows */
+        .glow-cyan { box-shadow: 0 0 20px rgb(var(--accent-rgb) / .25); }
+        .glow-cyan-sm { box-shadow: 0 0 10px rgb(var(--accent-rgb) / .15); }
+        .border-glow { border-color: rgb(var(--accent-rgb) / .4); box-shadow: inset 0 0 12px rgb(var(--accent-rgb) / .1); }
 
         /* Hero glow */
         @keyframes heroGlow {
@@ -229,47 +147,27 @@
             50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.15); }
         }
         .hero-glow {
-            position: absolute;
-            top: 30%;
-            left: 50%;
-            width: 36rem;
-            max-width: 90%;
-            height: 18rem;
-            border-radius: 9999px;
-            background: radial-gradient(closest-side, rgba(165, 105, 189, 0.4), rgba(142, 68, 173, 0.18) 60%, transparent);
-            filter: blur(40px);
-            pointer-events: none;
+            position: absolute; top: 30%; left: 50%; width: 36rem; max-width: 90%; height: 18rem;
+            border-radius: 9999px; filter: blur(40px); pointer-events: none;
+            background: radial-gradient(closest-side, rgb(var(--accent-rgb) / .28), transparent);
             animation: heroGlow 6s ease-in-out infinite;
-        }
-        html.light .hero-glow {
-            background: radial-gradient(closest-side, rgba(142, 68, 173, 0.25), rgba(165, 105, 189, 0.12) 60%, transparent);
         }
         @media (prefers-reduced-motion: reduce) {
             .hero-glow { animation: none; opacity: 0.4; transform: translate(-50%, -50%); }
         }
-
-        /* Active nav pill: slate-900 / white */
-        html.light .nav-btn.nav-active {
-            background-color: #1e1b4b !important;
-            border-color: #1e1b4b !important;
-            color: #ffffff !important;
-        }
     </style>
-<style>
+    <style>
 @keyframes cyberScan {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(350%); }
 }
-.cyber-grid-bg {
-  background-image: radial-gradient(rgba(165, 105, 189, 0.3) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
+.cyber-grid-bg { background-image: radial-gradient(var(--dot) 1px, transparent 1px); background-size: 24px 24px; }
 .cyber-scanner::after {
   content: "";
   position: absolute;
   top: 0; left: 0; right: 0; height: 30%;
-  background: linear-gradient(180deg, transparent, rgba(165, 105, 189, 0.2) 70%, rgba(34, 211, 238, 0.45) 100%);
-  border-bottom: 2px solid rgba(34, 211, 238, 0.7);
+  background: linear-gradient(180deg, transparent, rgb(var(--accent-rgb) / .12) 70%, rgb(var(--accent-rgb) / .3) 100%);
+  border-bottom: 2px solid rgb(var(--accent-rgb) / .5);
   pointer-events: none;
   animation: cyberScan 5s linear infinite;
 }
@@ -286,74 +184,58 @@
 .ambient-orb-b { animation: orbFloatB 22s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .ambient-orb { animation: none; }
-}
-.cat-tab:hover { box-shadow: 0 0 0 1px #a569bd, 0 6px 18px rgba(124,58,237,0.18); }
-/* Light mode: airy lavender surfaces */
-html.light [class~="bg-[#f5f3fa]"], html.light .bg-white, html.light .ag-info, html.light .ag-badge-card { background-color: #f7f5fb; }
-html.light header[class~="bg-[#f5f3fa]/90"] { background-color: rgba(247,245,251,.9); }
-html.light [class~="border-[#e2dcf2]"] { border-color: #d8cff8; }
-html.light .ag-info, html.light .ag-badge-card { border-color: #d8cff8; }
-html.light .ag-step-node { fill: #f7f5fb; }
-/* Lower-section tech mesh backgrounds */
-#explorer > div.rounded-2xl, #explorer .cat-tab, [id^="dash-sec-"] div.rounded-2xl {
-  background-image: radial-gradient(var(--ag-dot) 1px, transparent 1.2px);
-  background-size: 18px 18px;
-}
-[id^="dash-sec-"] div.rounded-2xl {
-  background-image: radial-gradient(var(--ag-dot) 1px, transparent 1.2px),
-    repeating-linear-gradient(135deg, var(--ag-line) 0 1px, transparent 1px 14px);
-  background-size: 18px 18px, auto;
-}
-html.light { --ag-dot: rgba(124,58,237,.18); --ag-line: rgba(124,58,237,.05); }
-html.dark, html:not(.light) { --ag-dot: rgba(165,105,189,.22); --ag-line: rgba(0,240,255,.04); }
-/* Light mode contrast */
-html.light #explorer .cat-tab:not(.border-cyber-cyan),
-html.light #explorer > div.rounded-2xl,
-html.light [id^="dash-sec-"] div.rounded-2xl { border-color: #d8cff8; }
-html.light #explorer .cat-tab:not(.border-cyber-cyan):hover { border-color: #7c3aed; }
-html.light #explorer .cat-tab h3,
-html.light [id^="dash-sec-"] h3 { color: #311060; }
-html.light #explorer .cat-tab svg.lucide,
-html.light #dash-sec-overview svg.lucide { stroke: #7c3aed; color: #7c3aed; }
-html.light .ag-gfx .stroke-slate-400, html.light .ag-wave .stroke-slate-400 { stroke: #7c3aed; opacity: .85; }
-html.light .ag-gfx .text-purple-500, html.light .ag-wave.text-purple-500 { color: #311060; }
-html.light .ag-gfx .dark\:text-purple-500, html.light .ag-gfx .text-cyan-400 { color: #7c3aed; }
-html.light .ag-gfx .dark\:text-cyan-400 { color: #311060; }
-html.light .ag-wave { color: #7c3aed; }
-/* Dark mode luminous highlights */
-html.dark .ag-gfx .stroke-slate-400, html.dark .ag-wave .stroke-slate-400 { stroke: #a569bd; }
-html.dark .ag-gfx .dark\:text-cyan-400, html.dark .ag-wave.dark\:text-cyan-400 { color: #00f0ff; }
-html.dark .ag-gfx .dark\:text-purple-500 { color: #c58fe0; }
-html.dark .ag-gfx, html.dark .ag-wave { filter: drop-shadow(0 0 4px rgba(0,240,255,.55)) drop-shadow(0 0 8px rgba(165,105,189,.35)); }
-/* SVG graphics */
-.ag-gfx { opacity: .95; }
-/* Static infographics */
-.ag-info { border: 1.5px solid #b8a9fc; background: #ffffff; border-radius: 1rem; }
-html.dark .ag-info { border-color: #6b3fa0; background: #150d26; }
-.ag-info .ag-step-node { fill: #ffffff; stroke: #7c3aed; stroke-width: 2; }
-html.dark .ag-info .ag-step-node { fill: #1d1235; stroke: #c58fe0; }
-.ag-info .ag-step-line { stroke: #7c3aed; stroke-width: 2; }
-html.dark .ag-info .ag-step-line { stroke: #a569bd; }
-.ag-info .ag-step-ico { stroke: #6d28d9; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-html.dark .ag-info .ag-step-ico { stroke: #c58fe0; }
-.ag-info .ag-step-accent { fill: #06b6d4; }
-.ag-info .ag-step-title { font-weight: 700; color: #311060; }
-html.dark .ag-info .ag-step-title { color: #ffffff; }
-.ag-info .ag-step-sub { color: #475569; }
-html.dark .ag-info .ag-step-sub { color: #cbd5e1; }
-.ag-badge-card { border: 1.5px solid #b8a9fc; background: #ffffff; border-radius: .9rem; }
-html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
-@media (prefers-reduced-motion: reduce) {
   .cyber-scanner::after { animation: none; display: none; }
 }
+.cat-tab:hover { box-shadow: 0 0 0 1px var(--accent), 0 6px 18px rgb(var(--accent-rgb) / .15); }
+/* Mesh backgrounds */
+#explorer > div.rounded-2xl, #explorer .cat-tab, [id^="dash-sec-"] div.rounded-2xl {
+  background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+html.light #explorer .cat-tab:not(.border-cyber-cyan):hover { border-color: var(--accent); }
+html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(--text); }
+/* Decorative SVG strokes */
+.ag-gfx { opacity: .95; }
+.ag-gfx .stroke-slate-400, .ag-wave .stroke-slate-400 { stroke: var(--accent); opacity: .7; }
+.ag-gfx .text-cyan-400, .ag-gfx .dark\:text-cyan-400, .ag-gfx .text-purple-500, .ag-gfx .dark\:text-purple-500, .ag-wave { color: var(--accent); }
+/* Panels */
+.ag-info, .ag-badge-card { border: 1px solid var(--border); background: var(--card); border-radius: 1rem; }
+.ag-badge-card { border-radius: .9rem; }
+.ag-info .ag-step-ico { stroke: var(--accent); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.ag-info .ag-step-title { font-weight: 700; color: var(--text); }
+.ag-info .ag-step-sub { color: var(--muted); }
+/* How-it-works pipeline */
+.ag-pipeline { position: relative; }
+.ag-pipeline::before { content: ""; position: absolute; left: 1.75rem; top: 1.75rem; bottom: 1.75rem; width: 2px; background: var(--accent); opacity: .55; }
+.ag-step { position: relative; display: flex; gap: 1rem; align-items: flex-start; padding-bottom: 1.5rem; }
+.ag-step:last-child { padding-bottom: 0; }
+.ag-step-dot { position: relative; z-index: 1; flex: none; width: 3.5rem; height: 3.5rem; border-radius: 9999px; background: var(--accent); display: flex; align-items: center; justify-content: center; }
+.ag-step-dot svg { width: 1.75rem; height: 1.75rem; stroke: var(--on-accent); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.ag-days { display: flex; flex-wrap: wrap; gap: .375rem; margin-top: .5rem; list-style: none; padding: 0; }
+.ag-days li { font: 600 11px/1.2 'JetBrains Mono', monospace; padding: .25rem .5rem; border-radius: .375rem; border: 1px solid var(--accent); color: var(--accent); }
+@media (min-width: 640px) {
+  .ag-pipeline::before { left: 12.5%; right: 12.5%; top: 1.75rem; bottom: auto; width: auto; height: 2px; }
+  .ag-step { flex-direction: column; align-items: center; text-align: center; padding: 0 .75rem; }
+  .ag-days { justify-content: center; }
+}
+/* Hero graphic */
+.ag-svg-card { fill: var(--bg); stroke: var(--border); stroke-width: 1.5; }
+.ag-svg-photo { fill: var(--surface-alt); stroke: var(--border); stroke-width: 1; }
+.ag-svg-shape { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ag-svg-flag { fill: var(--danger); }
+.ag-svg-flag-text { fill: var(--on-danger); font: 700 12px Inter, system-ui, sans-serif; }
+.ag-svg-label { fill: var(--text); font: 600 14px Inter, system-ui, sans-serif; }
+.ag-svg-score { fill: var(--text); font: 800 22px Inter, system-ui, sans-serif; }
+.ag-svg-arrow { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ag-svg-sub { fill: var(--muted); font: 500 12px Inter, system-ui, sans-serif; }
 </style>
 </head>
 <body class="bg-[#f0eef6] dark:bg-[#100a1d] text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-300" id="appBody">
 
     <!-- Ambient background orbs -->
     <div class="ambient-orbs fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
-        <div class="ambient-orb ambient-orb-a absolute -top-32 -left-32 w-[32rem] h-[32rem] rounded-full bg-[#a569bd] blur-3xl opacity-20"></div>
-        <div class="ambient-orb ambient-orb-b absolute top-1/3 -right-40 w-[36rem] h-[36rem] rounded-full bg-[#06b6d4] blur-3xl opacity-20"></div>
+        <div class="ambient-orb ambient-orb-a absolute -top-32 -left-32 w-[32rem] h-[32rem] rounded-full bg-cyber-cyan blur-3xl opacity-20"></div>
+        <div class="ambient-orb ambient-orb-b absolute top-1/3 -right-40 w-[36rem] h-[36rem] rounded-full bg-cyber-cyan blur-3xl opacity-20"></div>
     </div>
 
     <!-- TOP NAVIGATION BAR -->
@@ -384,7 +266,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             </nav>
 
             <!-- Actions & Theme Toggle -->
-            <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 sm:space-x-3">
                 <!-- Theme Switcher Button -->
                 <button type="button" id="theme-toggle" class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-cyber-cyan transition-all light:bg-slate-100 light:border-slate-300 light:text-slate-700" title="Toggle Light/Dark Theme">
                     <i data-lucide="sun" id="themeIconSun" class="w-4 h-4 hidden"></i>
@@ -424,19 +306,49 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 <p class="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
                     Find copycat stores using your product images, then act before stolen listings keep diverting customers and revenue.
                 </p>
-                <p class="mt-3 text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                    Behind the scenes, PRNU-informed image fingerprinting and forensic evidence workflows help identify reused product photos and support takedown requests.
-                </p>
 
-                <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button onclick="switchTab('onboarding')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-brand-dark hover:bg-brand-darker dark:bg-brand dark:hover:bg-brand-light bg-gradient-to-r from-brand-dark to-cyan-500 dark:from-brand dark:to-cyan-400 text-white dark:text-slate-950 font-bold text-base transition-all shadow-lg flex items-center justify-center space-x-2">
-                        <i data-lucide="shield" class="w-5 h-5"></i>
-                        <span>Start 7-Day Free Trial (No Card Required)</span>
-                    </button>
+                <div class="mt-8 flex flex-col sm:flex-row items-center sm:items-start justify-center gap-4">
+                    <div class="w-full sm:w-auto flex flex-col items-center gap-1.5">
+                        <button onclick="switchTab('onboarding')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-brand-dark hover:bg-brand-darker text-white dark:text-slate-950 font-bold text-base transition-all shadow-lg flex items-center justify-center space-x-2">
+                            <i data-lucide="shield" class="w-5 h-5"></i>
+                            <span>Start 7-Day Free Trial</span>
+                        </button>
+                        <span class="text-xs text-slate-500">No card required &middot; Cancel anytime</span>
+                    </div>
                     <a href="#explorer" class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-[#e2dcf2] dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-[#32214f] font-medium text-base transition-all">
                         Explore Protected Industries
                     </a>
                 </div>
+
+                <!-- Hero graphic: original photo vs detected clone -->
+                <figure class="mt-10 mx-auto max-w-3xl" aria-labelledby="hero-gfx-caption">
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+                        <svg class="w-full max-w-[280px] h-auto" width="280" height="240" viewBox="0 0 280 240" role="img" aria-labelledby="gfx-a-title">
+                            <title id="gfx-a-title">Your store: original product photo</title>
+                            <rect class="ag-svg-card" x="1" y="1" width="278" height="238" rx="16"/>
+                            <rect class="ag-svg-photo" x="20" y="20" width="240" height="150" rx="10"/>
+                            <circle class="ag-svg-shape" cx="210" cy="55" r="14"/>
+                            <path class="ag-svg-shape" d="M50 150L105 90l35 35 30-25 60 50z"/>
+                            <text class="ag-svg-label" x="20" y="198">Your store</text>
+                            <text class="ag-svg-sub" x="20" y="219">Original product photo</text>
+                        </svg>
+                        <svg class="shrink-0 w-12 sm:w-16 h-auto rotate-90 sm:rotate-0" width="64" height="24" viewBox="0 0 64 24" aria-hidden="true">
+                            <path class="ag-svg-arrow" d="M4 12h52M44 4l12 8-12 8"/>
+                        </svg>
+                        <svg class="w-full max-w-[280px] h-auto" width="280" height="240" viewBox="0 0 280 240" role="img" aria-labelledby="gfx-b-title">
+                            <title id="gfx-b-title">Clone detected: copied photo with a 98% match score</title>
+                            <rect class="ag-svg-card" x="1" y="1" width="278" height="238" rx="16"/>
+                            <rect class="ag-svg-photo" x="20" y="20" width="240" height="150" rx="10"/>
+                            <circle class="ag-svg-shape" cx="210" cy="55" r="14"/>
+                            <path class="ag-svg-shape" d="M50 150L105 90l35 35 30-25 60 50z"/>
+                            <rect class="ag-svg-flag" x="32" y="32" width="128" height="26" rx="13"/>
+                            <text class="ag-svg-flag-text" x="96" y="49" text-anchor="middle">Clone detected</text>
+                            <text class="ag-svg-score" x="20" y="198">98% match</text>
+                            <text class="ag-svg-sub" x="20" y="219">Copied listing</text>
+                        </svg>
+                    </div>
+                    <figcaption id="hero-gfx-caption" class="mt-3 text-[11px] text-slate-500">Sample data &mdash; illustrative example, not a real store.</figcaption>
+                </figure>
 
                 <!-- Feature Pillars Badges -->
                 <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4 pt-8 border-t border-[#e2dcf2] dark:border-[#32214f]/80">
@@ -460,7 +372,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
             </div>
 
             <!-- EUROPEAN RETAIL PILOT TRUST BANNER -->
-            <section aria-labelledby="pilot-heading" class="relative overflow-hidden rounded-2xl border border-cyber-cyan/40 bg-gradient-to-r from-[#eafcff] via-[#f5f3fa] to-[#eee5f7] dark:from-[#102a36] dark:via-[#19102d] dark:to-[#24143a] p-6 sm:p-8 shadow-xl glow-cyan-sm">
+            <section aria-labelledby="pilot-heading" class="relative overflow-hidden rounded-2xl border border-cyber-cyan/40 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-xl glow-cyan-sm">
                 <div class="absolute inset-y-0 left-0 w-1.5 bg-cyber-cyan" aria-hidden="true"></div>
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div class="max-w-xl">
@@ -486,7 +398,62 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                         </div>
                     </div>
                 </div>
-                <p class="mt-4 text-[11px] text-slate-500 dark:text-slate-400">Three identified cases are still pending resolution; figures reflect the current operational snapshot.</p>
+                <p class="mt-4 text-[11px] text-slate-500 dark:text-slate-400">25 of 28 identified threats have had a notice dispatched (89.3%). Three identified cases are still pending resolution; figures reflect the current operational snapshot.</p>
+            </section>
+
+            <!-- HOW IT WORKS -->
+            <section id="how-it-works" aria-labelledby="how-heading" class="ag-info p-5 sm:p-8 space-y-8">
+                <div class="text-center max-w-2xl mx-auto">
+                    <h2 id="how-heading" class="text-2xl font-bold text-slate-900 dark:text-white">How AlphaGuard Protects Your Brand</h2>
+                    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Four automated stages take a stolen listing from first detection to takedown.</p>
+                    <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Under the hood, PRNU-informed image fingerprinting and forensic evidence workflows help identify reused product photos and support takedown requests.</p>
+                </div>
+
+                <ol class="ag-pipeline sm:grid sm:grid-cols-4">
+                    <li class="ag-step">
+                        <span class="ag-step-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></svg></span>
+                        <div><h3 class="ag-step-title text-base">Scan</h3><p class="ag-step-sub text-xs mt-1">Crawl marketplaces, search &amp; social 24/7</p></div>
+                    </li>
+                    <li class="ag-step">
+                        <span class="ag-step-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span>
+                        <div><h3 class="ag-step-title text-base">Detect</h3><p class="ag-step-sub text-xs mt-1">Match fingerprints to flag infringements</p></div>
+                    </li>
+                    <li class="ag-step">
+                        <span class="ag-step-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></span>
+                        <div><h3 class="ag-step-title text-base">Verify</h3><p class="ag-step-sub text-xs mt-1">Evidence hashed &amp; ownership confirmed</p></div>
+                    </li>
+                    <li class="ag-step">
+                        <span class="ag-step-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></span>
+                        <div>
+                            <h3 class="ag-step-title text-base">Takedown</h3>
+                            <p class="ag-step-sub text-xs mt-1">DMCA notices, SERP de-indexing &amp; host lock</p>
+                            <ul class="ag-days">
+                                <li>Day 1 &middot; DMCA</li>
+                                <li>Day 3 &middot; De-index</li>
+                                <li>Day 7 &middot; Host lock</li>
+                            </ul>
+                        </div>
+                    </li>
+                </ol>
+
+                <ul class="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-6 border-t border-[#e2dcf2] dark:border-[#32214f] list-none p-0" aria-label="Trust and compliance">
+                    <li class="ag-badge-card p-3 flex items-center gap-3">
+                        <svg class="w-8 h-8 shrink-0 text-cyber-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+                        <span class="ag-step-title text-xs">DMCA Compliant</span>
+                    </li>
+                    <li class="ag-badge-card p-3 flex items-center gap-3">
+                        <svg class="w-8 h-8 shrink-0 text-cyber-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+                        <span class="ag-step-title text-xs">256-bit Encryption</span>
+                    </li>
+                    <li class="ag-badge-card p-3 flex items-center gap-3">
+                        <svg class="w-8 h-8 shrink-0 text-cyber-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+                        <span class="ag-step-title text-xs">24/7 Monitoring</span>
+                    </li>
+                    <li class="ag-badge-card p-3 flex items-center gap-3">
+                        <svg class="w-8 h-8 shrink-0 text-cyber-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 14l2 2 4-4"/></svg>
+                        <span class="ag-step-title text-xs">Verified Evidence</span>
+                    </li>
+                </ul>
             </section>
 
             <!-- PUBLIC INDUSTRY CATEGORY EXPLORER -->
@@ -498,9 +465,6 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                             <span>Industry Defense Explorer</span>
                         </h2>
                         <p class="text-sm text-slate-400 light:text-slate-600">Select a major sector to inspect protected sub-categories, threat modules, and tailored SaaS plans.</p>
-                    </div>
-                    <div class="text-xs font-mono text-cyber-cyan bg-cyber-cyan/10 border border-cyber-cyan/20 px-3 py-1.5 rounded-lg">
-                        15+ Specialized Protection Modules Available
                     </div>
                 </div>
 
@@ -553,68 +517,6 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                     </button>
                         </div>
                     </details>
-                </div>
-
-                <!-- Protection Flowchart & Trust Badges -->
-                <div class="ag-info p-5 sm:p-6 space-y-6">
-                    <div class="flex items-center justify-between flex-wrap gap-2">
-                        <h3 class="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-                            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.4 9-8 11-4.6-2-8-6-8-11V5z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
-                            How Alpha Guard Protects Your Brand
-                        </h3>
-                        <span class="text-[11px] font-mono font-semibold text-purple-600 dark:text-purple-400 border border-purple-600/40 dark:border-purple-400/40 rounded px-2 py-0.5">4-STEP AUTOMATED PIPELINE</span>
-                    </div>
-                    <ol class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-0">
-                        <li class="relative flex lg:flex-col items-center lg:text-center gap-3 lg:px-3">
-                            <div class="relative shrink-0 w-14 h-14 rounded-full border-2 border-purple-600 dark:border-purple-400 bg-white dark:bg-[#1d1235] flex items-center justify-center">
-                                <svg class="w-7 h-7 ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/></svg>
-                                <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-400 text-white dark:text-slate-950 text-[10px] font-bold flex items-center justify-center">1</span>
-                            </div>
-                            <div><div class="ag-step-title text-sm">Scan</div><div class="ag-step-sub text-xs">Crawl marketplaces, search &amp; social 24/7</div></div>
-                            <span class="hidden lg:block absolute top-7 left-[calc(50%+2.25rem)] right-[calc(-50%+2.25rem)] border-t-2 border-dashed border-purple-600 dark:border-purple-400"></span>
-                        </li>
-                        <li class="relative flex lg:flex-col items-center lg:text-center gap-3 lg:px-3">
-                            <div class="relative shrink-0 w-14 h-14 rounded-full border-2 border-purple-600 dark:border-purple-400 bg-white dark:bg-[#1d1235] flex items-center justify-center">
-                                <svg class="w-7 h-7 ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.01"/></svg>
-                                <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-400 text-white dark:text-slate-950 text-[10px] font-bold flex items-center justify-center">2</span>
-                            </div>
-                            <div><div class="ag-step-title text-sm">Detect</div><div class="ag-step-sub text-xs">Match fingerprints to flag infringements</div></div>
-                            <span class="hidden lg:block absolute top-7 left-[calc(50%+2.25rem)] right-[calc(-50%+2.25rem)] border-t-2 border-dashed border-purple-600 dark:border-purple-400"></span>
-                        </li>
-                        <li class="relative flex lg:flex-col items-center lg:text-center gap-3 lg:px-3">
-                            <div class="relative shrink-0 w-14 h-14 rounded-full border-2 border-purple-600 dark:border-purple-400 bg-white dark:bg-[#1d1235] flex items-center justify-center">
-                                <svg class="w-7 h-7 ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
-                                <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-400 text-white dark:text-slate-950 text-[10px] font-bold flex items-center justify-center">3</span>
-                            </div>
-                            <div><div class="ag-step-title text-sm">Verify</div><div class="ag-step-sub text-xs">Evidence hashed &amp; ownership confirmed</div></div>
-                            <span class="hidden lg:block absolute top-7 left-[calc(50%+2.25rem)] right-[calc(-50%+2.25rem)] border-t-2 border-dashed border-purple-600 dark:border-purple-400"></span>
-                        </li>
-                        <li class="relative flex lg:flex-col items-center lg:text-center gap-3 lg:px-3">
-                            <div class="relative shrink-0 w-14 h-14 rounded-full border-2 border-purple-600 dark:border-purple-400 bg-white dark:bg-[#1d1235] flex items-center justify-center">
-                                <svg class="w-7 h-7 ag-step-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
-                                <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-400 text-white dark:text-slate-950 text-[10px] font-bold flex items-center justify-center">4</span>
-                            </div>
-                            <div><div class="ag-step-title text-sm">Takedown</div><div class="ag-step-sub text-xs">DMCA notices &amp; SERP de-indexing sent</div></div>
-                        </li>
-                    </ol>
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-5 border-t border-[#b8a9fc] dark:border-[#32214f]">
-                        <div class="ag-badge-card p-3 flex items-center gap-3">
-                            <svg class="w-9 h-9 shrink-0 text-purple-600 dark:text-purple-400" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 3l14 5v10c0 9-6 16-14 19C12 34 6 27 6 18V8z"/><path d="M13.5 20l4.5 4.5 9-9"/></svg>
-                            <div class="leading-tight"><div class="ag-step-title text-xs">DMCA Compliant</div><div class="ag-step-sub text-[11px]">Legally valid notices</div></div>
-                        </div>
-                        <div class="ag-badge-card p-3 flex items-center gap-3">
-                            <svg class="w-9 h-9 shrink-0 text-purple-600 dark:text-purple-400" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="18" width="24" height="17" rx="3"/><path d="M13 18v-5a7 7 0 0114 0v5"/><circle cx="20" cy="26.5" r="2.5"/></svg>
-                            <div class="leading-tight"><div class="ag-step-title text-xs">256-bit Encryption</div><div class="ag-step-sub text-[11px]">Data secured at rest</div></div>
-                        </div>
-                        <div class="ag-badge-card p-3 flex items-center gap-3">
-                            <svg class="w-9 h-9 shrink-0 text-purple-600 dark:text-purple-400" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="20" cy="20" r="15"/><path d="M20 10v10l7 4"/></svg>
-                            <div class="leading-tight"><div class="ag-step-title text-xs">24/7 Monitoring</div><div class="ag-step-sub text-[11px]">Always-on crawlers</div></div>
-                        </div>
-                        <div class="ag-badge-card p-3 flex items-center gap-3">
-                            <svg class="w-9 h-9 shrink-0 text-purple-600 dark:text-purple-400" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4l5 5h7v7l5 4-5 4v7h-7l-5 5-5-5H8v-7l-5-4 5-4V9h7z"/><path d="M14 20l4 4 8-8"/></svg>
-                            <div class="leading-tight"><div class="ag-step-title text-xs">Verified Evidence</div><div class="ag-step-sub text-[11px]">Tamper-proof hash logs</div></div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Sub-category Listing Panel -->
@@ -1252,14 +1154,14 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                                 <div class="w-4 h-4 rounded-full bg-cyber-cyan"></div>
                                 <div>
                                     <div class="font-bold text-white">Dark Cyber Theme</div>
-                                    <div class="text-[10px] text-slate-400">Navy Blue #0a0f1d + Cyan #00f0ff</div>
+                                    <div class="text-[10px] text-slate-400">Deep Navy + Cyan accent</div>
                                 </div>
                             </button>
                             <button onclick="setThemeMode('light')" class="p-3 rounded-xl border border-slate-300 bg-[#f5f3fa] text-left text-xs flex items-center space-x-3">
                                 <div class="w-4 h-4 rounded-full bg-slate-900"></div>
                                 <div>
                                     <div class="font-bold text-slate-900">Light Minimal Theme</div>
-                                    <div class="text-[10px] text-slate-600">Pure White + Deep Charcoal</div>
+                                    <div class="text-[10px] text-slate-600">Soft White + Teal accent</div>
                                 </div>
                             </button>
                         </div>
@@ -1309,7 +1211,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                 <span>• Continuous Digital Asset Defense</span>
             </div>
             <div class="font-mono text-[11px]">
-                FastAPI Backend Infrastructure • 7-Day Multi-Tier Escalation Pipeline
+                7-Day Multi-Tier Escalation Pipeline
             </div>
             <div class="flex items-center gap-4">
                 <span>© 2026 AlphaGuard Security Suite. All rights reserved.</span>
@@ -1610,7 +1512,7 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
         }
 
         // Dashboard sub-tabs
-        const DASH_TAB_ACTIVE = ['border-brand-dark', 'dark:border-[#a569bd]', 'text-brand-darker', 'dark:text-[#c39bd3]', 'font-bold'];
+        const DASH_TAB_ACTIVE = ['border-cyber-cyan', 'text-cyber-cyan', 'font-bold'];
         const DASH_TAB_INACTIVE = ['border-transparent', 'text-slate-500', 'dark:text-slate-400'];
 
         function switchDashTab(name) {
