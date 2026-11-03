@@ -189,9 +189,12 @@ def create_dmca_notice_draft(
     infringing_url = _validate_http_url(target_infringing_url, "Infringing URL")
     asset_url = _validate_http_url(original_asset_url, "Original asset URL")
 
+    infringing_host = urlsplit(infringing_url).hostname or ""
     safe_infringing_url = escape(infringing_url, quote=True)
     safe_asset_url = escape(asset_url, quote=True)
-    safe_store_domain = escape(store_domain or urlsplit(infringing_url).hostname or "", quote=True)
+    safe_infringing_host = escape(infringing_host, quote=True)
+    safe_owner = escape(store_domain or "the copyright owner", quote=True)
+    safe_sender = escape(sender, quote=True)
     recipient_note = (
         "<p><strong>Recipient note:</strong> This address was suggested "
         "from WHOIS registration data and is not verified as an abuse contact. "
@@ -204,26 +207,65 @@ def create_dmca_notice_draft(
         recipient=recipient,
         sender=sender,
         subject=(
-            "LEGAL NOTICE: Formal DMCA Copyright Infringement Notice - "
-            f"{store_domain or urlsplit(infringing_url).hostname}"
+            "Notice of Copyright Infringement & Takedown Request - "
+            f"{infringing_host}"
         ),
         html=(
-            "<h2>DMCA TAKEDOWN NOTICE</h2>"
-            "<p><strong>To the Abuse and Legal Department:</strong></p>"
-            "<p>Please review this report of suspected unauthorized use of "
-            f"protected media hosted at <strong>{safe_store_domain}</strong>:</p>"
-            "<ul>"
-            f"<li><strong>Infringing URL:</strong> {safe_infringing_url}</li>"
-            f"<li><strong>Original Asset Reference:</strong> {safe_asset_url}</li>"
-            "</ul>"
-            "<p>The reported imagery was identified by the AlphaGuard image "
-            "similarity scanner. Please review the materials and take any "
-            "appropriate action under your applicable policies and legal obligations.</p>"
-            "<p>Please direct any response to the AlphaGuard Legal Enforcement Team "
-            f"at {escape(sender, quote=True)}.</p>"
+            '<div style="font-family: Arial, sans-serif; color: #111; max-width: 600px;">'
+            '<h2 style="color: #b91c1c; border-bottom: 2px solid #b91c1c; padding-bottom: 10px;">'
+            "DMCA TAKEDOWN NOTICE</h2>"
+            "<p><strong>To the Site Administrator / Host Abuse Department:</strong></p>"
+            "<p>This is a notice under the Digital Millennium Copyright Act, "
+            "17 U.S.C. &sect; 512(c)(3). AlphaGuard Security Suite is the authorized "
+            f"agent of <strong>{safe_owner}</strong>, the owner of the copyrighted "
+            f"images described below. Material on <strong>{safe_infringing_host}</strong> "
+            "appears to use those images without authorization.</p>"
+            '<div style="background-color: #f8fafc; padding: 15px; '
+            'border-left: 4px solid #b91c1c; margin: 20px 0;">'
+            "<p><strong>Infringing material (location):</strong><br>"
+            f"{safe_infringing_url}</p>"
+            "<p><strong>Original copyrighted work:</strong><br>"
+            f"{safe_asset_url}</p></div>"
+            "<p>The match was identified by the AlphaGuard image similarity "
+            "scanner.</p>"
+            "<h3>Requested action</h3>"
+            "<p>Please remove or disable access to the infringing material. We ask "
+            f"that you confirm by replying to {safe_sender} within "
+            "<strong>7 calendar days</strong> of this notice.</p>"
+            "<p>I have a good faith belief that use of the material in the manner "
+            "complained of is not authorized by the copyright owner, its agent, or "
+            "the law. The information in this notice is accurate, and under penalty "
+            "of perjury, I am authorized to act on behalf of the owner of the "
+            "exclusive rights allegedly infringed.</p>"
+            "<p>Signed: /AlphaGuard Legal Enforcement Team/<br>"
+            f"Contact: {safe_sender}</p>"
             f"{recipient_note}"
+            "</div>"
         ),
     )
     result = asdict(draft)
     result["recipient_source"] = recipient_source
     return result
+
+
+def preview_sample_notice() -> dict[str, str]:
+    """Build a sample notice from dummy data and print it. Never sends email."""
+    draft = create_dmca_notice_draft(
+        host_abuse_email="abuse@example-host.test",
+        target_infringing_url="https://example-pirate-site.test/stolen-product-image.jpg",
+        original_asset_url="https://mock-merchant-store.test/products/original-image.jpg",
+        sender_email="legal@example.test",
+        store_domain="mock-merchant-store.test",
+        recipient_source="whois",
+    )
+    print("PREVIEW ONLY - no email is sent.")
+    print(f"To:      {draft['recipient']} (source: {draft['recipient_source']})")
+    print(f"From:    {draft['sender']}")
+    print(f"Subject: {draft['subject']}")
+    print("-" * 60)
+    print(draft["html"])
+    return draft
+
+
+if __name__ == "__main__":
+    preview_sample_notice()

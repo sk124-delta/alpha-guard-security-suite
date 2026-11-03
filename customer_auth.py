@@ -62,6 +62,31 @@ class CustomerRegistrationSchema(BaseModel):
         return value
 
 
+class MerchantSignupSchema(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+    store_name: str = Field(min_length=1, max_length=120)
+    store_url: str = Field(min_length=1, max_length=2048)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return CustomerRegistrationSchema.validate_email(value)
+
+    @field_validator("store_name")
+    @classmethod
+    def validate_store_name(cls, value: str) -> str:
+        return CustomerRegistrationSchema.validate_name(value)
+
+    @field_validator("store_url")
+    @classmethod
+    def validate_store_url(cls, value: str) -> str:
+        domain = CustomerRegistrationSchema.validate_store_url(value)
+        if domain is None:
+            raise ValueError("Enter a valid store URL.")
+        return domain
+
+
 class RegistrationAvailabilitySchema(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     store_url: str | None = Field(default=None, max_length=2048)

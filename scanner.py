@@ -1,5 +1,6 @@
 from io import BytesIO
 import ipaddress
+import os
 import socket
 from urllib.parse import urlsplit
 import warnings
@@ -10,6 +11,8 @@ from PIL import Image
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 REQUEST_TIMEOUT = (3, 10)
+SERPAPI_ENDPOINT = "https://serpapi.com/search"
+SERPAPI_TIMEOUT = (5, 30)
 
 
 def _validate_public_url(image_url: str) -> None:
@@ -69,6 +72,50 @@ def compute_image_hash(image_url: str) -> str:
         with Image.open(BytesIO(image_data)) as image:
             image.load()
             return str(imagehash.phash(image))
+
+
+def search_web_for_matches(image_url: str, api_key: str | None = None, max_results: int = 20) -> list[dict]:
+    """Reverse-image search (SerpApi Google Lens) for copies of a public image URL.
+
+    The key comes from the SERPAPI_KEY environment variable unless passed explicitly;
+    never hardcode it. Returns [{"title", "url", "source"}], skipping entries without a link.
+    Raises ValueError for bad input/config and RuntimeError for API or network failures.
+    """
+    _validate_public_url(image_url)
+    key = api_key or os.environ.get("SERPAPI_KEY")
+    if not key:
+        raise ValueError("Set the SERPAPI_KEY environment variable (or pass api_key).")
+
+    try:
+        with requests.Session() as session:
+            session.trust_env = False
+            response = session.get(
+                SERPAPI_ENDPOINT,
+                params={"engine": "google_lens", "url": image_url, "api_key": key},
+                timeout=SERPAPI_TIMEOUT,
+            )
+    except requests.RequestException as exc:
+        # Do not echo the exception text: it can contain the request URL with the API key.
+        raise RuntimeError(f"Reverse image search request failed ({type(exc).__name__}).") from None
+
+    if response.status_code != 200:
+        raise RuntimeError(f"Reverse image search failed with HTTP {response.status_code}.")
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise RuntimeError("Reverse image search returned invalid JSON.") from exc
+    if data.get("error"):
+        raise RuntimeError(f"Reverse image search error: {data['error']}")
+
+    matches = []
+    for match in data.get("visual_matches") or []:
+        link = match.get("link")
+        if not link or urlsplit(link).scheme not in {"http", "https"}:
+            continue
+        matches.append({"title": match.get("title") or "", "url": link, "source": match.get("source") or ""})
+        if len(matches) >= max_results:
+            break
+    return matches
 
 
 def compare_hashes(hash1_str: str, hash2_str: str) -> float:

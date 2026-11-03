@@ -9,6 +9,8 @@ from html.parser import HTMLParser
 from ipaddress import ip_address
 from urllib.parse import urljoin, urlsplit
 
+from dotenv import load_dotenv
+
 import requests
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,6 +32,7 @@ from customer_auth import (
     PASSWORD_RESET_EXPIRE_MINUTES,
     CustomerLoginSchema,
     CustomerRegistrationSchema,
+    MerchantSignupSchema,
     PasswordResetConfirmSchema,
     PasswordResetRequestSchema,
     RegistrationAvailabilitySchema,
@@ -59,6 +62,8 @@ from watermarker import (
     process_digital_asset_or_code,
     process_image_in_memory,
 )
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -485,6 +490,8 @@ def ensure_registration_available(db: Session, email: str, store_domain: str | N
         raise HTTPException(status_code=400, detail=REGISTRATION_EMAIL_ERROR)
     if store_domain and db.query(CustomerAccountModel).filter(CustomerAccountModel.store_domain == store_domain).first():
         raise HTTPException(status_code=400, detail=REGISTRATION_DOMAIN_ERROR)
+    if store_domain and db.query(StoreModel).filter(StoreModel.store_url == store_domain).first():
+        raise HTTPException(status_code=400, detail=REGISTRATION_DOMAIN_ERROR)
 
 
 @app.post("/v1/auth/check-availability")
@@ -540,6 +547,47 @@ def register_customer(data: CustomerRegistrationSchema, db: Session = Depends(ge
         "user": {"email": data.email, "store_name": data.name, "store_domain": store_domain},
         "welcome_email_sent": welcome_email_sent,
         "email_dispatched": welcome_email_sent,
+    }
+
+
+@app.post("/api/v1/auth/signup")
+def register_merchant(data: MerchantSignupSchema, db: Session = Depends(get_db)):
+    store_domain = data.store_url
+    ensure_registration_available(db, data.email, store_domain)
+
+    customer = CustomerAccountModel(
+        name=data.store_name,
+        email=data.email,
+        password_hash=hash_customer_password(data.password),
+        store_domain=store_domain,
+    )
+    store = StoreModel(
+        store_url=store_domain,
+        owner_email=data.email,
+        active_skus=0,
+    )
+    db.add_all([customer, store])
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        if db.query(CustomerAccountModel).filter(CustomerAccountModel.email == data.email).first():
+            raise HTTPException(status_code=400, detail=REGISTRATION_EMAIL_ERROR) from exc
+        if (
+            db.query(CustomerAccountModel)
+            .filter(CustomerAccountModel.store_domain == store_domain)
+            .first()
+            or db.query(StoreModel).filter(StoreModel.store_url == store_domain).first()
+        ):
+            raise HTTPException(status_code=400, detail=REGISTRATION_DOMAIN_ERROR) from exc
+        logger.exception("Could not persist merchant signup.")
+        raise HTTPException(status_code=500, detail="Merchant signup could not be completed.") from exc
+
+    return {
+        "message": "Merchant account successfully created!",
+        "store_name": data.store_name,
+        "email": data.email,
+        "role": "customer",
     }
 
 
@@ -801,6 +849,55 @@ def get_store_metrics(store_id: int, db: Session = Depends(get_db)):
     }
 
 
+def auto_dispatch_enabled() -> bool:
+    return os.getenv("AUTO_DISPATCH_DMCA", "").strip().lower() in {"1", "true", "yes"}
+
+
+def auto_dispatch_notice(db: Session, notice_id: str) -> str:
+    """Send a PENDING notice without admin review. Returns the resulting status."""
+    try:
+        api_key, configured_sender = get_resend_settings()
+    except (RuntimeError, ValueError) as exc:
+        logger.warning("Auto-dispatch skipped; email is not configured: %s", exc)
+        return "PENDING"
+
+    notice = db.query(NoticeModel).filter(NoticeModel.id == notice_id).first()
+    if not notice or notice.sender != configured_sender:
+        return "PENDING"
+
+    claimed = (
+        db.query(NoticeModel)
+        .filter(NoticeModel.id == notice_id, NoticeModel.status == "PENDING")
+        .update({NoticeModel.status: "DISPATCHING"}, synchronize_session=False)
+    )
+    db.commit()
+    if claimed != 1:
+        db.refresh(notice)
+        return notice.status
+
+    try:
+        provider_message_id = send_dmca_notice(
+            api_key=api_key,
+            sender_email=configured_sender,
+            recipient=notice.recipient,
+            subject=notice.subject,
+            html=notice.body_html,
+        )
+    except DmcaProviderRejectedError as exc:
+        logger.warning("Auto-dispatch rejected for notice %s: %s", notice_id, exc)
+        notice.status = "DISPATCH_FAILED"
+    except DmcaDeliveryUnknownError as exc:
+        logger.warning("Auto-dispatch outcome unknown for notice %s: %s", notice_id, exc)
+        notice.status = "DISPATCH_UNKNOWN"
+    else:
+        notice.status = "DISPATCHED"
+        notice.dispatched_at = datetime.now(timezone.utc)
+        notice.dispatched_by = "auto-dispatch"
+        notice.provider_message_id = provider_message_id
+    db.commit()
+    return notice.status
+
+
 @app.post("/api/v1/scan/execute-takedown")
 def execute_automated_scan(data: ScanRequestSchema, db: Session = Depends(get_db)):
     store = db.query(StoreModel).filter(StoreModel.id == data.store_id).first()
@@ -879,15 +976,28 @@ def execute_automated_scan(data: ScanRequestSchema, db: Session = Depends(get_db
     store.scans_performed = (store.scans_performed or 0) + 1
     db.commit()
 
+    notice_status = "PENDING" if notice_id else None
+    if notice_id and recipient_source == "provided" and auto_dispatch_enabled():
+        notice_status = auto_dispatch_notice(db, notice_id)
+
     return {
         "success": True,
         "similarity_match_percentage": round(similarity, 2),
-        "takedown_notice_sent": False,
+        "takedown_notice_sent": notice_status == "DISPATCHED",
+        "notice_status": notice_status,
         "notice_draft": notice_draft,
         "notice_id": notice_id,
         "message": (
-            "Potential match found. Review the DMCA notice draft before sending."
-            if notice_draft
-            else "Scan completed; no match met the 90% review threshold."
+            _scan_message(notice_draft, notice_status)
         ),
     }
+
+
+def _scan_message(notice_draft: dict | None, notice_status: str | None) -> str:
+    if not notice_draft:
+        return "Scan completed; no match met the 90% review threshold."
+    if notice_status == "DISPATCHED":
+        return "Match found at or above 90%; the DMCA notice was sent automatically."
+    if notice_status in {"DISPATCH_FAILED", "DISPATCH_UNKNOWN"}:
+        return f"Match found, but automatic dispatch ended as {notice_status}. Review the notice before retrying."
+    return "Potential match found. Review the DMCA notice draft before sending."
