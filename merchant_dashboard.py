@@ -28,6 +28,26 @@ def api_request(method: str, path: str, **kwargs) -> requests.Response:
     )
 
 
+def clear_session() -> None:
+    st.session_state.pop("token", None)
+    st.session_state.pop("role", None)
+    st.session_state.pop("protected", None)
+
+
+def json_or_none(response: requests.Response):
+    try:
+        return response.json()
+    except ValueError:
+        return None
+
+
+def expire_if_unauthorized(response: requests.Response) -> None:
+    if response.status_code == 401:
+        clear_session()
+        st.warning("Your session expired. Please sign in again.")
+        st.rerun()
+
+
 def sign_in(email: str, password: str) -> str | None:
     """Return an error message, or None on success."""
     try:
@@ -36,10 +56,14 @@ def sign_in(email: str, password: str) -> str | None:
         )
     except requests.RequestException:
         return f"Could not reach the API at {API_URL}."
+    body = json_or_none(response)
+    if not isinstance(body, dict):
+        return f"Unexpected response from the API (HTTP {response.status_code})."
     if response.status_code != 200:
-        detail = response.json().get("detail") if response.content else None
+        detail = body.get("detail")
         return detail if isinstance(detail, str) else "Sign-in failed."
-    body = response.json()
+    if not body.get("access_token"):
+        return "Sign-in failed."
     st.session_state["token"] = body["access_token"]
     st.session_state["role"] = body.get("role", "customer")
     return None
@@ -62,10 +86,8 @@ def register_store(email: str, password: str, store_name: str, store_url: str) -
         return f"Could not reach the API at {API_URL}."
     if response.status_code == 200:
         return None
-    try:
-        detail = response.json().get("detail")
-    except ValueError:
-        detail = None
+    body = json_or_none(response)
+    detail = body.get("detail") if isinstance(body, dict) else None
     if isinstance(detail, list):
         return "Please check your details: " + "; ".join(
             str(item.get("msg", "invalid value")) for item in detail
@@ -79,15 +101,15 @@ def load_notices() -> list[dict] | None:
     except requests.RequestException:
         st.error(f"Could not reach the API at {API_URL}.")
         return None
-    if response.status_code == 401:
-        st.session_state.pop("token", None)
-        st.session_state.pop("role", None)
-        st.warning("Your session expired. Please sign in again.")
-        st.rerun()
+    expire_if_unauthorized(response)
     if response.status_code != 200:
         st.error(f"Could not load notices (HTTP {response.status_code}).")
         return None
-    return response.json()
+    notices = json_or_none(response)
+    if not isinstance(notices, list):
+        st.error("The API returned an unexpected response.")
+        return None
+    return notices
 
 
 if "token" not in st.session_state:
@@ -135,8 +157,7 @@ page = st.sidebar.radio("Select View", pages)
 if st.sidebar.button("Refresh"):
     st.rerun()
 if st.sidebar.button("Sign out"):
-    st.session_state.pop("token", None)
-    st.session_state.pop("role", None)
+    clear_session()
     st.rerun()
 
 if page == "Protect Assets":
@@ -149,6 +170,7 @@ if page == "Protect Assets":
     if uploaded_file is not None:
         st.image(uploaded_file, caption="Preview: Selected Product Asset", width=300)
         if st.button("Protect Asset"):
+            st.session_state.pop("protected", None)
             with st.spinner("Applying watermark and generating fingerprint..."):
                 try:
                     response = api_request(
@@ -166,24 +188,38 @@ if page == "Protect Assets":
                 except requests.RequestException:
                     st.error(f"Could not reach the API at {API_URL}.")
                 else:
+                    expire_if_unauthorized(response)
                     if response.status_code == 200:
-                        st.success("Asset protected.")
-                        st.json(
-                            {
-                                "perceptual_hash": response.headers.get(
-                                    "X-AlphaGuard-Perceptual-Hash"
-                                ),
-                                "payload_id": response.headers.get("X-AlphaGuard-Payload-Id"),
-                            }
-                        )
-                        st.download_button(
-                            "Download protected image",
-                            response.content,
-                            file_name="alphaguard-watermarked.png",
-                            mime="image/png",
-                        )
+                        st.session_state["protected"] = {
+                            "source": uploaded_file.name,
+                            "image": response.content,
+                            "perceptual_hash": response.headers.get("X-AlphaGuard-Perceptual-Hash"),
+                            "payload_id": response.headers.get("X-AlphaGuard-Payload-Id"),
+                        }
                     else:
-                        st.error(f"Protection failed (HTTP {response.status_code}).")
+                        body = json_or_none(response)
+                        detail = body.get("detail") if isinstance(body, dict) else None
+                        st.error(
+                            detail
+                            if isinstance(detail, str)
+                            else f"Protection failed (HTTP {response.status_code})."
+                        )
+    # Kept in session state so the download button's rerun does not discard the result.
+    protected = st.session_state.get("protected")
+    if protected and uploaded_file is not None and protected["source"] == uploaded_file.name:
+        st.success("Asset protected.")
+        st.json(
+            {
+                "perceptual_hash": protected["perceptual_hash"],
+                "payload_id": protected["payload_id"],
+            }
+        )
+        st.download_button(
+            "Download protected image",
+            protected["image"],
+            file_name="alphaguard-watermarked.png",
+            mime="image/png",
+        )
     st.stop()
 
 if page == "Store Metrics":
@@ -194,10 +230,11 @@ if page == "Store Metrics":
     except requests.RequestException:
         st.error(f"Could not reach the API at {API_URL}.")
     else:
-        if response.status_code == 200:
-            data = response.json()
-            st.metric("Store", data["store_url"])
-            st.metric("Scans performed", data["scans_performed"])
+        expire_if_unauthorized(response)
+        data = json_or_none(response)
+        if response.status_code == 200 and isinstance(data, dict):
+            st.metric("Store", data.get("store_url", "-"))
+            st.metric("Scans performed", data.get("scans_performed", 0))
         elif response.status_code == 404:
             st.info("No store found with that ID.")
         else:

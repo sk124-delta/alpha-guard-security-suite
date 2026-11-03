@@ -8,11 +8,73 @@ import warnings
 import imagehash
 import requests
 from PIL import Image
+from requests.adapters import HTTPAdapter
+from urllib3.connection import HTTPConnection, HTTPSConnection
+from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
+from urllib3.exceptions import NewConnectionError
+from urllib3.util import connection as urllib3_connection
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 REQUEST_TIMEOUT = (3, 10)
 SERPAPI_ENDPOINT = "https://serpapi.com/search"
 SERPAPI_TIMEOUT = (5, 30)
+
+
+def _open_public_socket(conn):
+    """Resolve once, require a global address, and connect to that exact IP.
+
+    Connecting to the validated IP (not re-resolving the hostname) defeats DNS rebinding.
+    TLS still verifies against the original hostname.
+    """
+    try:
+        infos = socket.getaddrinfo(conn._dns_host, conn.port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        raise NewConnectionError(conn, f"Could not resolve host: {exc}") from exc
+    if not infos or not all(ipaddress.ip_address(i[4][0]).is_global for i in infos):
+        raise NewConnectionError(conn, "Host does not resolve to a public address.")
+    return urllib3_connection.create_connection(
+        (infos[0][4][0], conn.port),
+        conn.timeout,
+        source_address=conn.source_address,
+        socket_options=conn.socket_options,
+    )
+
+
+class _PublicHTTPConnection(HTTPConnection):
+    def _new_conn(self):
+        return _open_public_socket(self)
+
+
+class _PublicHTTPSConnection(HTTPSConnection):
+    def _new_conn(self):
+        return _open_public_socket(self)
+
+
+class _PublicHTTPPool(HTTPConnectionPool):
+    ConnectionCls = _PublicHTTPConnection
+
+
+class _PublicHTTPSPool(HTTPSConnectionPool):
+    ConnectionCls = _PublicHTTPSConnection
+
+
+class _PublicOnlyAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        super().init_poolmanager(*args, **kwargs)
+        self.poolmanager.pool_classes_by_scheme = {
+            "http": _PublicHTTPPool,
+            "https": _PublicHTTPSPool,
+        }
+
+
+def public_only_session() -> requests.Session:
+    """Session that can only connect to publicly routable IPs (SSRF-safe)."""
+    session = requests.Session()
+    session.trust_env = False
+    adapter = _PublicOnlyAdapter()
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
 
 
 def _validate_public_url(image_url: str) -> None:
@@ -40,8 +102,7 @@ def _validate_public_url(image_url: str) -> None:
 def compute_image_hash(image_url: str) -> str:
     _validate_public_url(image_url)
 
-    with requests.Session() as session:
-        session.trust_env = False
+    with public_only_session() as session:
         with session.get(
             image_url,
             timeout=REQUEST_TIMEOUT,

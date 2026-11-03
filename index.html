@@ -2146,9 +2146,11 @@ html.dark .ag-badge-card { border-color: #6b3fa0; background: #150d26; }
                     }
                     const data = await auth.handleSignUp(payload.email, payload.password, payload.name, payload.store_url);
                     sessionUser = data?.session?.user || data?.user || null;
+                    const welcomeHeaders = {'Content-Type': 'application/json'};
+                    if (data?.session?.access_token) welcomeHeaders['Authorization'] = `Bearer ${data.session.access_token}`;
                     fetch('/api/v1/auth/register', {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: welcomeHeaders,
                         body: JSON.stringify(payload)
                     }).catch((err) => console.error('Welcome notify failed:', err));
                     if (!data?.session) {

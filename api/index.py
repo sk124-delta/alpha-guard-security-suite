@@ -149,14 +149,37 @@ def send_reset(data: SendResetRequest):
         ) from e
 
 
-def _signup_welcome(data: SignupNotifyRequest) -> JSONResponse:
+def _verified_supabase_email(request: Request) -> str | None:
+    """Email of the caller's Supabase session, or None if absent/invalid."""
+    auth_header = request.headers.get("authorization", "")
+    scheme, _, token = auth_header.partition(" ")
+    key = _service_role_key()
+    if scheme.lower() != "bearer" or not token or not SUPABASE_URL or not key:
+        return None
+    try:
+        response = requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={"apikey": key, "Authorization": f"Bearer {token}"},
+            timeout=(3, 10),
+        )
+        if response.status_code != 200:
+            return None
+        email = response.json().get("email")
+    except (requests.RequestException, ValueError):
+        return None
+    return email.strip().lower() if isinstance(email, str) else None
+
+
+def _signup_welcome(data: SignupNotifyRequest, verified_email: str | None) -> JSONResponse:
     email_sent = False
-    if RESEND_KEY:
+    recipient = str(data.email).strip().lower()
+    # Only mail the address the caller has proven they own via a Supabase session.
+    if RESEND_KEY and verified_email == recipient:
         try:
             resend.api_key = os.environ.get("RESEND_API_KEY")
             resend.Emails.send({
                 "from": f"AlphaGuard Security <{RESET_SENDER}>",
-                "to": [str(data.email).strip().lower()],
+                "to": [recipient],
                 "subject": "Welcome to AlphaGuard Security Suite",
                 "html": f"<h2>Welcome {html.escape(data.name)}!</h2><p>Your trial account has been created successfully.</p>",
             })
@@ -222,7 +245,7 @@ async def catch_all(request: Request, path: str = ""):
             })
         except ValidationError as exc:
             raise HTTPException(status_code=422, detail="A valid email address is required.") from exc
-        return _signup_welcome(notify)
+        return _signup_welcome(notify, _verified_supabase_email(request))
 
     if action == "login" or "token" in combined or "login" in combined:
         return JSONResponse(

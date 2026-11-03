@@ -15,6 +15,7 @@ import requests
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
+from fastapi.security import HTTPAuthorizationCredentials
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, create_engine
@@ -24,6 +25,7 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from auth import (
     TOKEN_EXPIRE_MINUTES,
     AdminLoginSchema,
+    bearer_scheme,
     issue_admin_token,
     verify_admin_access,
 )
@@ -44,6 +46,7 @@ from customer_auth import (
     send_password_reset_email,
     send_welcome_email,
     verify_customer_password,
+    verify_customer_token,
 )
 from dmca_dispatcher import (
     DmcaDeliveryUnknownError,
@@ -54,7 +57,12 @@ from dmca_dispatcher import (
     lookup_whois_contact,
     send_dmca_notice,
 )
-from scanner import _validate_public_url, compare_hashes, compute_image_hash
+from scanner import (
+    _validate_public_url,
+    compare_hashes,
+    compute_image_hash,
+    public_only_session,
+)
 from watermarker import (
     DEFAULT_PAYLOAD_ID,
     MAX_DOWNLOAD_BYTES,
@@ -246,8 +254,7 @@ def _normalize_inspection_url(value: str) -> str:
 
 def _fetch_public_page(url: str) -> tuple[bytes, str]:
     _validate_public_url(url)
-    with requests.Session() as session:
-        session.trust_env = False
+    with public_only_session() as session:
         with session.get(
             url,
             headers={"User-Agent": "AlphaGuard-Audit-Bot/1.0"},
@@ -315,6 +322,47 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+class Principal(BaseModel):
+    email: str
+    role: str
+
+
+def get_current_principal(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> Principal:
+    """Accept an admin or customer bearer token; role comes only from the verified token."""
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=401,
+            detail="A valid bearer token is required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    customer_email = verify_customer_token(credentials.credentials)
+    if customer_email:
+        return Principal(email=customer_email, role="customer")
+    try:
+        return Principal(email=verify_admin_access(credentials), role="admin")
+    except HTTPException as exc:
+        if exc.status_code == 503:
+            raise
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+
+def require_store_access(db: Session, store_id: int, principal: Principal) -> StoreModel:
+    store = db.query(StoreModel).filter(StoreModel.id == store_id).first()
+    # Same response for missing and foreign stores so IDs cannot be enumerated.
+    if not store or (
+        principal.role != "admin"
+        and (store.owner_email or "").strip().lower() != principal.email
+    ):
+        raise HTTPException(status_code=404, detail="Store not found")
+    return store
 
 
 @app.post("/api/v1/inspect-domain")
@@ -837,10 +885,12 @@ def dispatch_dmca_notice(
 
 
 @app.get("/api/v1/metrics/{store_id}")
-def get_store_metrics(store_id: int, db: Session = Depends(get_db)):
-    store = db.query(StoreModel).filter(StoreModel.id == store_id).first()
-    if not store:
-        raise HTTPException(status_code=404, detail="Store not found")
+def get_store_metrics(
+    store_id: int,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+):
+    store = require_store_access(db, store_id, principal)
 
     return {
         "store_url": store.store_url,
@@ -899,10 +949,12 @@ def auto_dispatch_notice(db: Session, notice_id: str) -> str:
 
 
 @app.post("/api/v1/scan/execute-takedown")
-def execute_automated_scan(data: ScanRequestSchema, db: Session = Depends(get_db)):
-    store = db.query(StoreModel).filter(StoreModel.id == data.store_id).first()
-    if not store:
-        raise HTTPException(status_code=404, detail="Store not found")
+def execute_automated_scan(
+    data: ScanRequestSchema,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+):
+    store = require_store_access(db, data.store_id, principal)
 
     try:
         original_hash = compute_image_hash(str(data.original_image_url))
@@ -977,7 +1029,7 @@ def execute_automated_scan(data: ScanRequestSchema, db: Session = Depends(get_db
     db.commit()
 
     notice_status = "PENDING" if notice_id else None
-    if notice_id and recipient_source == "provided" and auto_dispatch_enabled():
+    if notice_id and recipient_source == "provided" and principal.role == "admin" and auto_dispatch_enabled():
         notice_status = auto_dispatch_notice(db, notice_id)
 
     return {

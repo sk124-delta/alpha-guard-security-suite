@@ -8,7 +8,7 @@ from html import escape
 from urllib.parse import urlsplit
 
 import requests
-from jose import jwt
+from jose import JWTError, jwt
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -185,6 +185,27 @@ def issue_customer_token(email: str) -> str:
         secret_key,
         algorithm="HS256",
     )
+
+
+def verify_customer_token(token: str) -> str | None:
+    """Return the customer email for a valid customer token, else None."""
+    secret_key = os.getenv("JWT_SECRET_KEY", "")
+    if len(secret_key) < 32:
+        return None
+    try:
+        payload = jwt.decode(
+            token,
+            secret_key,
+            algorithms=["HS256"],
+            issuer=CUSTOMER_TOKEN_ISSUER,
+            options={"require_exp": True, "require_sub": True, "require_iss": True},
+        )
+    except JWTError:
+        return None
+    email = payload.get("sub")
+    if payload.get("role") != "customer" or not isinstance(email, str):
+        return None
+    return email
 
 
 def get_account_email_settings() -> tuple[str, str]:

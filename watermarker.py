@@ -328,7 +328,9 @@ def _download_image(url: str, dest_path: str) -> None:
 
     Redirects are followed manually so each hop is re-validated.
     """
-    session = requests.Session()
+    from scanner import public_only_session
+
+    session = public_only_session()
     headers = {"User-Agent": USER_AGENT, "Accept": "image/*"}
     current = url
     try:
