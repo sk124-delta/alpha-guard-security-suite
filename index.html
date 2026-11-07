@@ -2056,6 +2056,44 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
             await handlePasswordReset(email);
         }
 
+        function setFieldError(inputId, message) {
+            const input = document.getElementById(inputId);
+            const err = document.getElementById(`${inputId}-error`);
+            if (input) input.setAttribute('aria-invalid', message ? 'true' : 'false');
+            if (err) {
+                err.textContent = message;
+                err.classList.toggle('hidden', !message);
+            }
+            return !message;
+        }
+
+        function validatePasswordLength() {
+            const pw = document.getElementById('signup-password').value;
+            return setFieldError('signup-password', pw.length >= 8 ? '' : 'Password must be at least 8 characters.');
+        }
+
+        function validatePasswordMatch() {
+            const pw = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('signup-password-confirm').value;
+            return setFieldError('signup-password-confirm', confirm === pw ? '' : 'Passwords do not match.');
+        }
+
+        function validateSignupForm() {
+            const url = normalizeStoreDomain(document.getElementById('signup-url').value);
+            const urlOk = setFieldError('signup-url', url && url.includes('.') ? '' : 'Enter a valid store URL, e.g. https://acmestore.com');
+            const pwOk = validatePasswordLength();
+            const matchOk = validatePasswordMatch();
+            const form = document.getElementById('form-signup');
+            const firstInvalid = form.querySelector('[aria-invalid="true"]')
+                || Array.from(form.querySelectorAll('input[required]')).find(el => !el.value.trim() || !el.checkValidity());
+            if (firstInvalid && !(urlOk && pwOk && matchOk && form.checkValidity())) {
+                firstInvalid.focus();
+                if (urlOk && pwOk && matchOk) form.reportValidity();
+                return false;
+            }
+            return true;
+        }
+
         async function handleAuthSubmit(event, type) {
             event.preventDefault();
             const payload = { action: type };
@@ -2064,11 +2102,8 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 payload.password = document.getElementById('login-password').value;
             } else if (type === 'signup') {
                 payload.name = document.getElementById('signup-name').value;
+                if (!validateSignupForm()) return;
                 payload.store_url = normalizeStoreDomain(document.getElementById('signup-url').value);
-                if (!payload.store_url || !payload.store_url.includes('.')) {
-                    alert('Enter a valid store URL, e.g. https://acmestore.com');
-                    return;
-                }
                 payload.email = document.getElementById('signup-email').value.trim().toLowerCase();
                 payload.password = document.getElementById('signup-password').value;
             } else if (type === 'forgot') {
@@ -2127,7 +2162,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 switchTab('dashboard');
             } catch (err) {
                 const message = err.message || 'Authentication failed. Please try again.';
-                alert(message);
+                showAuthStatus(message, true);
             }
         }
 
@@ -2341,14 +2376,15 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
         </form>
 
         <!-- Signup Form -->
-        <form id="form-signup" onsubmit="handleAuthSubmit(event, 'signup')" class="space-y-4 hidden">
+        <form id="form-signup" onsubmit="handleAuthSubmit(event, 'signup')" class="space-y-4 hidden" novalidate>
             <div>
                 <label for="signup-name" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Store Name / Full Name</label>
                 <input type="text" id="signup-name" autocomplete="name" maxlength="120" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="Acme Store">
             </div>
             <div>
                 <label for="signup-url" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Store Website URL</label>
-                <input type="text" id="signup-url" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="https://acmestore.com">
+                <input type="text" id="signup-url" required aria-describedby="signup-url-error" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="https://acmestore.com">
+                <p id="signup-url-error" class="hidden mt-1 text-xs text-red-400" aria-live="polite"></p>
             </div>
             <div>
                 <label for="signup-email" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Work Email</label>
@@ -2356,7 +2392,13 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
             </div>
             <div>
                 <label for="signup-password" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Password (8 characters minimum)</label>
-                <input type="password" id="signup-password" autocomplete="new-password" data-form-type="other" data-lpignore="true" minlength="8" maxlength="128" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
+                <input type="password" id="signup-password" autocomplete="new-password" data-form-type="other" data-lpignore="true" minlength="8" maxlength="128" required aria-describedby="signup-password-error" onblur="validatePasswordLength()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
+                <p id="signup-password-error" class="hidden mt-1 text-xs text-red-400" aria-live="polite"></p>
+            </div>
+            <div>
+                <label for="signup-password-confirm" class="block text-xs font-semibold text-slate-300 uppercase mb-1">Confirm Password</label>
+                <input type="password" id="signup-password-confirm" autocomplete="new-password" data-form-type="other" data-lpignore="true" maxlength="128" required aria-describedby="signup-password-confirm-error" onblur="validatePasswordMatch()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-cyan-400 outline-none" placeholder="••••••••">
+                <p id="signup-password-confirm-error" class="hidden mt-1 text-xs text-red-400" aria-live="polite"></p>
             </div>
             <button type="submit" class="auth-submit-button w-full bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-slate-950 font-bold py-3 rounded-lg transition">Create Account & Start Trial</button>
         </form>
