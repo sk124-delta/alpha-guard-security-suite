@@ -56,6 +56,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="src/trial-status.js"></script>
+    <script src="src/site-config.js"></script>
     <style>
         /* ---- Design tokens ---- */
         :root, html.dark {
@@ -378,28 +379,28 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div class="max-w-xl">
                         <div class="inline-flex items-center gap-2 text-xs font-mono font-bold tracking-wider text-cyber-cyandark dark:text-cyber-cyan">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
-                            EUROPEAN RETAIL PILOT · ACTIVE
+                            <span class="w-2 h-2 rounded-full bg-amber-500" aria-hidden="true"></span>
+                            EXAMPLE METRICS · SAMPLE DATA
                         </div>
-                        <h2 id="pilot-heading" class="mt-2 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">Real retail monitoring. Measurable response.</h2>
-                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Current operational snapshot from catalog monitoring and enforcement activity.</p>
+                        <h2 id="pilot-heading" class="mt-2 text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">What your dashboard tracks</h2>
+                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300"><strong>Sample data</strong> &mdash; illustrative example figures as of <span id="sample-as-of">2026-11-07</span>. These are not live metrics; your own dashboard shows your real activity.</p>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:min-w-[34rem]">
                         <div class="rounded-xl border border-cyber-cyan/20 bg-white/70 dark:bg-slate-900/70 p-4">
-                            <div class="text-2xl font-extrabold font-mono text-brand-dark dark:text-cyber-cyan">14,820</div>
-                            <div class="mt-1 text-[10px] uppercase tracking-wide font-mono text-slate-600 dark:text-slate-400">Scans performed</div>
+                            <div id="sample-scans" class="text-2xl font-extrabold font-mono text-brand-dark dark:text-cyber-cyan">14,820</div>
+                            <div class="mt-1 text-[10px] uppercase tracking-wide font-mono text-slate-600 dark:text-slate-400">Scans performed (sample)</div>
                         </div>
                         <div class="rounded-xl border border-cyber-cyan/20 bg-white/70 dark:bg-slate-900/70 p-4">
-                            <div class="text-2xl font-extrabold font-mono text-brand-dark dark:text-cyber-cyan">28</div>
-                            <div class="mt-1 text-[10px] uppercase tracking-wide font-mono text-slate-600 dark:text-slate-400">Threats identified</div>
+                            <div id="sample-threats" class="text-2xl font-extrabold font-mono text-brand-dark dark:text-cyber-cyan">28</div>
+                            <div class="mt-1 text-[10px] uppercase tracking-wide font-mono text-slate-600 dark:text-slate-400">Threats identified (sample)</div>
                         </div>
                         <div class="rounded-xl border border-cyber-cyan/20 bg-white/70 dark:bg-slate-900/70 p-4">
-                            <div class="text-2xl font-extrabold font-mono text-brand-dark dark:text-cyber-cyan">25</div>
-                            <div class="mt-1 text-[10px] uppercase tracking-wide font-mono text-slate-600 dark:text-slate-400">Notices dispatched</div>
+                            <div id="sample-notices" class="text-2xl font-extrabold font-mono text-brand-dark dark:text-cyber-cyan">25</div>
+                            <div class="mt-1 text-[10px] uppercase tracking-wide font-mono text-slate-600 dark:text-slate-400">Notices dispatched (sample)</div>
                         </div>
                     </div>
                 </div>
-                <p class="mt-4 text-[11px] text-slate-500 dark:text-slate-400">25 of 28 identified threats have had a notice dispatched (89.3%). Three identified cases are still pending resolution; figures reflect the current operational snapshot.</p>
+                <p id="sample-summary" class="mt-4 text-[11px] text-slate-500 dark:text-slate-400">Sample data: 25 of 28 example threats have a notice dispatched (89.3%).</p>
             </section>
 
             <!-- HOW IT WORKS -->
@@ -538,29 +539,31 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="relative overflow-hidden bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f] rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
-                                <div class="absolute top-0 right-0 bg-cyber-cyan text-cyber-black text-[9px] font-bold px-2 py-0.5 rounded-bl font-mono">SAVE $75</div>
+                                <div id="badge-growth" class="absolute top-0 right-0 bg-cyber-cyan text-cyber-black text-[9px] font-bold px-2 py-0.5 rounded-bl font-mono">SAVE $75</div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Bi-Annual</span>
-                                        <span class="text-xs font-mono text-emerald-600 dark:text-cyan-400 font-semibold">$399 / 6 Months</span>
+                                        <span data-price="growth" data-price-format="plan" class="text-xs font-mono text-emerald-600 dark:text-cyan-400 font-semibold">$399 / 6 Months</span>
                                     </div>
                                     <h4 class="font-bold text-slate-900 dark:text-white text-base">Growth Tier (6-Month Pass)</h4>
+                                    <p id="ref-growth" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5"></p>
                                     <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Get 6 months of daily catalog image scanning at a discounted upfront rate for boutique e-commerce stores.</p>
                                 </div>
-                                <a href="https://link.payoneer.com/Token?t=102EE28B56F74138B5DEA427401260A4&amp;src=pl" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Get 6-Month Plan ($399)</a>
+                                <a href="https://link.payoneer.com/Token?t=102EE28B56F74138B5DEA427401260A4&amp;src=pl" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all" data-price="growth" data-price-format="cta">Get 6-Month Plan ($399)</a>
                             </div>
 
                             <div class="relative overflow-hidden bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f] rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-sm dark:shadow-none">
-                                <div class="absolute top-0 right-0 bg-cyber-cyan text-cyber-black text-[9px] font-bold px-2 py-0.5 rounded-bl font-mono">SAVE $204</div>
+                                <div id="badge-pro" class="absolute top-0 right-0 bg-cyber-cyan text-cyber-black text-[9px] font-bold px-2 py-0.5 rounded-bl font-mono hidden"></div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Bi-Annual</span>
-                                        <span class="text-xs font-mono text-emerald-600 dark:text-cyan-400 font-semibold">$1,290 / 6 Months</span>
+                                        <span data-price="pro" data-price-format="plan" class="text-xs font-mono text-emerald-600 dark:text-cyan-400 font-semibold">$1,290 / 6 Months</span>
                                     </div>
                                     <h4 class="font-bold text-slate-900 dark:text-white text-base">Pro Tier (6-Month Pass)</h4>
+                                    <p id="ref-pro" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5"></p>
                                     <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">6 months of full-suite daily image-match scanning and DMCA notice drafting; de-listing and registrar stages are planned.</p>
                                 </div>
-                                <a href="https://link.payoneer.com/Token?t=7A8A69AAF88345BF85D605D331DF3544&amp;src=pl" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all">Get 6-Month Plan ($1,290)</a>
+                                <a href="https://link.payoneer.com/Token?t=7A8A69AAF88345BF85D605D331DF3544&amp;src=pl" class="card-btn w-full text-center block px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-cyan-400 dark:hover:bg-cyan-300 dark:text-slate-950 font-bold text-xs transition-all" data-price="pro" data-price-format="cta">Get 6-Month Plan ($1,290)</a>
                             </div>
                         </div>
                     </div>
@@ -838,7 +841,8 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <p id="manual-scan-status" class="hidden text-xs text-amber-400" role="status" aria-live="polite"></p>
                     <button onclick="triggerManualScan()" class="px-4 py-2 rounded-xl border border-cyber-cyan/40 bg-cyber-cyan/10 text-cyber-cyan hover:bg-cyber-cyan/20 text-xs font-mono transition-all flex items-center space-x-2">
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                         <span>Trigger Manual Asset Scan</span>
@@ -862,10 +866,10 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-                    <a href="https://link.payoneer.com/Token?t=102EE28B56F74138B5DEA427401260A4&amp;src=pl" class="px-4 py-2 rounded-xl border border-cyber-cyan/40 text-cyber-cyan text-xs font-bold hover:bg-cyber-cyan/10 transition-all">
+                    <a href="https://link.payoneer.com/Token?t=102EE28B56F74138B5DEA427401260A4&amp;src=pl" class="px-4 py-2 rounded-xl border border-cyber-cyan/40 text-cyber-cyan text-xs font-bold hover:bg-cyber-cyan/10 transition-all" data-price="growth" data-price-format="banner">
                         Growth 6-Month ($399)
                     </a>
-                    <a href="https://link.payoneer.com/Token?t=7A8A69AAF88345BF85D605D331DF3544&amp;src=pl" class="px-4 py-2.5 rounded-xl bg-cyber-cyan text-cyber-black font-bold text-xs hover:bg-cyber-cyandark transition-all glow-cyan">
+                    <a href="https://link.payoneer.com/Token?t=7A8A69AAF88345BF85D605D331DF3544&amp;src=pl" class="px-4 py-2.5 rounded-xl bg-cyber-cyan text-cyber-black font-bold text-xs hover:bg-cyber-cyandark transition-all glow-cyan" data-price="pro" data-price-format="banner">
                         Pro 6-Month ($1,290)
                     </a>
                 </div>
@@ -1118,7 +1122,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
 
                     <!-- Recently Added Assets -->
                     <div class="pt-6 border-t border-slate-800">
-                        <div class="text-xs font-mono text-slate-400 mb-3">CONNECTED ASSET DOMAINS</div>
+                        <div class="text-xs font-mono text-slate-400 mb-3">CONNECTED ASSET DOMAINS <span class="text-amber-400">(SAMPLE DATA &mdash; example only)</span></div>
                         <div class="space-y-2">
                             <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center text-xs light:bg-slate-100 light:border-slate-300">
                                 <div class="flex items-center space-x-2">
@@ -1471,14 +1475,45 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
         }
 
         function triggerManualScan() {
-            const scans = document.getElementById('stat-scans');
-            if (scans) {
-                const current = parseInt(scans.textContent.replace(/,/g, ''), 10) || 0;
-                scans.textContent = (current + 1).toLocaleString('en-US');
+            const status = document.getElementById('manual-scan-status');
+            if (status) {
+                status.textContent = `On-demand scans are not available yet. Catalog scans run on the ${window.AG_CONFIG ? window.AG_CONFIG.SCAN_CADENCE_LABEL : 'daily'} schedule.`;
+                status.classList.remove('hidden');
             }
         }
 
+        function applySiteConfig() {
+            const cfg = window.AG_CONFIG;
+            if (!cfg) return;
+            document.querySelectorAll('[data-price]').forEach((el) => {
+                el.textContent = cfg.planText(el.dataset.price, el.dataset.priceFormat);
+            });
+            Object.keys(cfg.PRICING).forEach((key) => {
+                const plan = cfg.PRICING[key];
+                const badge = document.getElementById(`badge-${key}`);
+                const ref = document.getElementById(`ref-${key}`);
+                const saved = cfg.savings(plan);
+                if (badge) {
+                    badge.textContent = saved ? `SAVE ${cfg.formatUsd(saved)}` : '';
+                    badge.classList.toggle('hidden', !saved);
+                }
+                if (ref) {
+                    ref.textContent = saved
+                        ? `vs. ${cfg.formatUsd(cfg.referenceTotal(plan))} (${cfg.formatUsd(plan.referenceMonthly)}/mo × ${plan.termMonths} months)`
+                        : '';
+                }
+            });
+            const s = cfg.SAMPLE_SNAPSHOT;
+            const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+            set('sample-scans', s.scans.toLocaleString('en-US'));
+            set('sample-threats', s.threats.toLocaleString('en-US'));
+            set('sample-notices', s.notices.toLocaleString('en-US'));
+            set('sample-as-of', s.asOf);
+            set('sample-summary', `Sample data: ${s.notices} of ${s.threats} example threats have a notice dispatched (${cfg.percent(s.notices, s.threats)}).`);
+        }
+
         window.onload = function() {
+            safeInit('site config', applySiteConfig);
             safeInit('icons', () => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
             safeInit('theme icons', () => setThemeMode(document.documentElement.classList.contains('light') ? 'light' : 'dark', false));
             safeInit('categories', () => selectCategory('ecom'));
