@@ -10,7 +10,7 @@
             let mode = null;
             try { mode = localStorage.getItem('theme') || localStorage.getItem('ag_theme'); } catch (e) { /* storage unavailable */ }
             if (mode !== 'light' && mode !== 'dark') {
-                mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+                mode = 'light'; // Evidence File (paper) is the default look; Dark Cyber is opt-in via the toggle.
             }
             document.documentElement.classList.add(mode);
         })();
@@ -245,6 +245,46 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
 html body#appBody { font-family: var(--font-body); }
 html[class] .font-mono { font-family: var(--font-mono); }
 html[class] :is(h1, h2) { font-family: var(--font-display); }
+
+/* Tokens. Evidence File (paper) is the default; Dark Cyber inverts them. */
+:root, html.light {
+  color-scheme: light;
+  --paper: #F5F2EB; --paper-2: #EDE8DC; --ink: #1A1A1A; --ink-2: #4A4740;
+  --rule: #1A1A1A; --rule-soft: rgba(26, 26, 26, 0.18);
+  --stamp: #B3261E; --ok: #2F5D3A; --warn: #7A4B00;
+  --on-stamp: #F5F2EB; --stamp-hover: #8E1D17;
+  --radius: 0; --radius-input: 2px;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-14: 56px; --sp-24: 96px;
+  --bg: var(--paper); --card: var(--paper-2); --accent: var(--stamp); --text: var(--ink); --muted: var(--ink-2);
+  --border: var(--rule-soft); --success: var(--ok); --warning: var(--warn); --danger: var(--stamp);
+  --on-accent: var(--on-stamp); --on-danger: var(--on-stamp); --accent-hover: var(--stamp-hover);
+  --surface-alt: rgba(26, 26, 26, 0.05); --dot: transparent;
+  --bg-rgb: 245 242 235; --card-rgb: 237 232 220; --accent-rgb: 179 38 30; --accent-hover-rgb: 142 29 23;
+}
+html.dark {
+  color-scheme: dark;
+  --paper: #14120F; --paper-2: #1E1B16; --ink: #EDE8DC; --ink-2: #B8B1A2;
+  --rule: #EDE8DC; --rule-soft: rgba(237, 232, 220, 0.22);
+  --stamp: #E5675F; --ok: #7FBF8E; --warn: #E0A94A;
+  --on-stamp: #14120F; --stamp-hover: #F08C86;
+  --surface-alt: rgba(237, 232, 220, 0.06);
+  --bg-rgb: 20 18 15; --card-rgb: 30 27 22; --accent-rgb: 229 103 95; --accent-hover-rgb: 240 140 134;
+}
+
+/* Square evidence files; only form inputs keep a 2px radius. */
+html[class] *, html[class] *::before, html[class] *::after { border-radius: var(--radius); }
+html[class] :is(input, select, textarea) { border-radius: var(--radius-input); }
+html[class] [class*="shadow"], html[class] .glow-cyan, html[class] .glow-cyan-sm, html[class] .border-glow { box-shadow: none; }
+html[class] [class*="backdrop-blur"] { -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* Page surface, rules and links */
+html body#appBody { background-color: var(--paper); color: var(--ink); }
+html[class] .hero-banner, html[class] .ag-info, html[class] .ag-badge-card { background-color: var(--paper); border-color: var(--rule); }
+html[class] .ag-info, html[class] .ag-badge-card { border-radius: 0; }
+html[class] .ambient-orbs, html[class] .hero-glow { display: none; }
+html[class] .cyber-scanner::after { display: none; }
+html[class] .cyber-grid-bg, html[class] #explorer > div.rounded-2xl, html[class] #explorer .cat-tab, html[class] [id^="dash-sec-"] div.rounded-2xl { background-image: none; }
+html[class] .animate-pulse { animation: none; }
 </style>
 </head>
 <body class="bg-[#f0eef6] dark:bg-[#100a1d] text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-300" id="appBody">
