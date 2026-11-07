@@ -1993,6 +1993,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 if (!data.valid) {
                     setText('rec-plan-name', 'No recommendation');
                     setText('rec-plan-price', '');
+                    setText('rec-plan-category', '');
                     setText('rec-plan-assets', 'Analyzed Domain: ' + domain);
                     setText('rec-plan-reason', data.message || 'This page does not appear to be a store or product catalog.');
                     return;
@@ -2012,6 +2013,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                     recBox.classList.remove('hidden');
                     setText('rec-plan-name', 'No recommendation');
                     setText('rec-plan-price', '');
+                    setText('rec-plan-category', '');
                     setText('rec-plan-assets', 'Analyzed Domain: ' + domain);
                     setText('rec-plan-reason', err.message || 'Inspection failed.');
                 }
