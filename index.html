@@ -250,7 +250,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 </div>
                 <div>
                     <span class="text-xl font-bold tracking-wider text-white dark:text-white light:text-slate-900">ALPHA<span class="text-cyber-cyan">GUARD</span></span>
-                    <span class="text-xs block text-slate-400 font-mono -mt-1">SECURITY SUITE v3.4</span>
+                    <span class="text-xs hidden sm:block text-slate-400 font-mono -mt-1">SECURITY SUITE v3.4</span>
                 </div>
             </div>
 
@@ -270,17 +270,17 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
             <!-- Actions & Theme Toggle -->
             <div class="flex items-center space-x-2 sm:space-x-3">
                 <!-- Theme Switcher Button -->
-                <button type="button" id="theme-toggle" class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-cyber-cyan transition-all light:bg-slate-100 light:border-slate-300 light:text-slate-700" title="Toggle Light/Dark Theme">
+                <button type="button" id="theme-toggle" class="p-2.5 rounded-lg border border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-slate-300 hover:text-cyber-cyan transition-all light:bg-slate-100 light:border-slate-300 light:text-slate-700" title="Toggle Light/Dark Theme" aria-label="Toggle light/dark theme">
                     <i data-lucide="sun" id="themeIconSun" class="w-4 h-4 hidden"></i>
                     <i data-lucide="moon" id="themeIconMoon" class="w-4 h-4"></i>
                 </button>
 
-                <button type="button" id="nav-auth-btn" onclick="toggleAuthModal(true)" class="px-4 py-2 rounded-lg border border-cyber-cyan/30 text-cyber-cyan hover:bg-cyber-cyan/10 font-medium text-sm transition-all light:text-cyber-cyandark">
+                <button type="button" id="nav-auth-btn" onclick="toggleAuthModal(true)" class="px-2.5 sm:px-4 py-2 rounded-lg border border-cyber-cyan/30 text-cyber-cyan hover:bg-cyber-cyan/10 font-medium text-xs sm:text-sm transition-all light:text-cyber-cyandark">
                     Sign In
                 </button>
                 <div id="nav-user-profile" class="hidden items-center space-x-2"></div>
 
-                <button type="button" onclick="startTrial()" class="bg-brand-dark hover:bg-brand-darker dark:bg-brand dark:hover:bg-brand-light text-white dark:text-slate-950 px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all shadow-lg">
+                <button type="button" onclick="startTrial()" class="bg-brand-dark hover:bg-brand-darker dark:bg-brand dark:hover:bg-brand-light text-white dark:text-slate-950 px-2.5 sm:px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all shadow-lg">
                     Start 7-Day Free Trial
                 </button>
             </div>
@@ -847,7 +847,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                         <span>Trigger Manual Asset Scan</span>
                     </button>
-                    <button onclick="openTab('dashboard-settings')" class="p-2 rounded-xl border border-slate-700 bg-slate-900 text-slate-300 hover:text-white text-xs dark:bg-slate-900 light:bg-slate-100 light:border-slate-300 light:text-slate-700">
+                    <button onclick="openTab('dashboard-settings')" aria-label="Open settings" class="p-2 rounded-xl border border-slate-700 bg-slate-900 text-slate-300 hover:text-white text-xs dark:bg-slate-900 light:bg-slate-100 light:border-slate-300 light:text-slate-700">
                         <i data-lucide="settings" class="w-4 h-4"></i>
                     </button>
                 </div>
@@ -1230,7 +1230,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
     </footer>
 
     <!-- ================= DMCA NOTICE & VISUAL PROOF MODAL ================= -->
-    <div id="dmca-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div id="dmca-modal" role="dialog" aria-modal="true" aria-labelledby="dmca-modal-title" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 text-slate-800 dark:text-slate-100 shadow-2xl relative">
             <button onclick="closeDmcaModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white" aria-label="Close DMCA notice">✕</button>
 
@@ -1239,7 +1239,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                     🛡️
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-white">Copyright Match Review</h3>
+                    <h3 id="dmca-modal-title" class="text-lg font-bold text-white">Copyright Match Review</h3>
                     <p class="text-xs text-slate-400 font-mono">Scan evidence and prepare a draft; no notice is sent automatically.</p>
                 </div>
             </div>
@@ -1642,10 +1642,14 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
         function toggleAuthModal(show, view = 'login') {
             const modal = document.getElementById('auth-modal');
             if (!modal) return;
-            modal.classList.toggle('hidden', !show);
             if (show) {
+                openModalA11y(modal);
                 showAuthStatus('');
                 switchAuthView(view);
+                const items = focusableIn(modal);
+                if (items.length) items[0].focus();
+            } else if (!modal.classList.contains('hidden')) {
+                closeModalA11y(modal);
             }
         }
 
@@ -2215,18 +2219,65 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
 
         const SIMILARITY_DISCLAIMER = 'Similarity is not a legal determination. Review all evidence before sending.';
 
+        let lastFocusedBeforeModal = null;
+        const MODAL_FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+        function focusableIn(modal) {
+            return Array.from(modal.querySelectorAll(MODAL_FOCUSABLE)).filter(el => el.offsetParent !== null);
+        }
+
+        function openModalA11y(modal) {
+            lastFocusedBeforeModal = document.activeElement;
+            modal.classList.remove('hidden');
+            const items = focusableIn(modal);
+            if (items.length) items[0].focus();
+        }
+
+        function closeModalA11y(modal) {
+            modal.classList.add('hidden');
+            if (lastFocusedBeforeModal && document.body.contains(lastFocusedBeforeModal)) lastFocusedBeforeModal.focus();
+            lastFocusedBeforeModal = null;
+        }
+
         function openDmcaModal(url) {
             const modal = document.getElementById('dmca-modal');
             if (!modal) return;
             const target = document.getElementById('modal-url');
             if (target && url) target.textContent = url;
-            modal.classList.remove('hidden');
+            openModalA11y(modal);
         }
 
         function closeDmcaModal() {
             const modal = document.getElementById('dmca-modal');
-            if (modal) modal.classList.add('hidden');
+            if (modal) closeModalA11y(modal);
         }
+
+        // Escape closes the open modal; Tab/Shift+Tab stay inside it.
+        document.addEventListener('keydown', event => {
+            const modal = ['dmca-modal', 'auth-modal']
+                .map(id => document.getElementById(id))
+                .find(el => el && !el.classList.contains('hidden'));
+            if (!modal) return;
+            if (event.key === 'Escape') {
+                if (modal.id === 'dmca-modal') closeDmcaModal();
+                return;
+            }
+            if (event.key !== 'Tab') return;
+            const items = focusableIn(modal);
+            if (!items.length) return;
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (!modal.contains(document.activeElement)) {
+                event.preventDefault();
+                first.focus();
+            } else if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        });
 
         // Scans two images and prepares a PENDING draft. The server never sends from here unless an
         // administrator has explicitly enabled AUTO_DISPATCH_DMCA (see main.send_notice_guarded).
@@ -2346,9 +2397,9 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
 
 
 <!-- Auth Modal -->
-<div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+<div id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
     <div class="bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f] p-8 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto relative shadow-2xl">
-        <button type="button" onclick="toggleAuthModal(false)" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
+        <button type="button" onclick="toggleAuthModal(false)" aria-label="Close sign in dialog" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
         
         <div class="mb-6">
             <h3 id="auth-modal-title" class="text-2xl font-bold text-white mb-2">AlphaGuard Portal</h3>
