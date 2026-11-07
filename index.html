@@ -606,7 +606,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                     <p class="text-xs text-slate-400 light:text-slate-600">This configures our background crawling engines for your industry's primary threat vectors.</p>
 
                     <div class="space-y-3">
-                        <label class="block text-xs font-mono text-slate-300 light:text-slate-700">Industry Vertical</label>
+                        <label for="ob-vertical" class="block text-xs font-mono text-slate-300 light:text-slate-700">Industry Vertical</label>
                         <select id="ob-vertical" onchange="updateSubcatOptions()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:border-cyber-cyan focus:outline-none dark:bg-slate-900 light:bg-slate-50 light:border-slate-300 light:text-slate-900">
                             <option value="E-Commerce & Retail Brands">E-Commerce & Retail Brands</option>
                             <option value="The Creator Economy & Digital Media">The Creator Economy & Digital Media</option>
@@ -614,7 +614,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                             <option value="Specialized Sectors & Executive Protection">Specialized Sectors & Executive Protection</option>
                         </select>
 
-                        <label class="block text-xs font-mono text-slate-300 light:text-slate-700 mt-4">Specific Sub-Niche</label>
+                        <label id="ob-subniche-label" for="ob-subniche" class="block text-xs font-mono text-slate-300 light:text-slate-700 mt-4">Specific Sub-Niche</label>
                         <select id="ob-subniche" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:border-cyber-cyan focus:outline-none dark:bg-slate-900 light:bg-slate-50 light:border-slate-300 light:text-slate-900">
                             <!-- Populated dynamically via JS -->
                         </select>
@@ -990,7 +990,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                                 </tr>
                             </thead>
                             <tbody id="dash-queue-table-body" class="divide-y divide-slate-800 light:divide-slate-200">
-                                <!-- Rendered dynamically by JS -->
+                                <tr><td colspan="5" class="p-4 text-slate-400">No active infringements yet. New detections will appear here.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1279,7 +1279,6 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
     </div>
 </div>
 
-" 
 <script>
         // MASTER DATA STRUCTURE FOR INDUSTRY CATEGORIES & SUB-CATEGORIES
         const industryData = {
@@ -1442,7 +1441,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                     td.className = 'p-4 text-slate-400';
                     td.textContent = isAdminSession()
                         ? 'No pending admin notices.'
-                        : 'No active notices yet. New detections will appear here.';
+                        : 'No active infringements yet. New detections will appear here.';
                     emptyRow.appendChild(td);
                     el.appendChild(emptyRow);
                     return;
@@ -2028,12 +2027,17 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
             if (verticalVal.includes('Digital Asset')) targetKey = 'creative';
             if (verticalVal.includes('Specialized')) targetKey = 'specialized';
 
-            industryData[targetKey].subcats.forEach(sub => {
+            const subcats = (industryData[targetKey] && industryData[targetKey].subcats) || [];
+            subcats.forEach(sub => {
                 const opt = document.createElement('option');
                 opt.value = sub.name;
                 opt.innerText = `${sub.name} — (${sub.plan})`;
                 subSelect.appendChild(opt);
             });
+            // Hide the sub-niche field (and its label) until it has options.
+            subSelect.classList.toggle('hidden', subcats.length === 0);
+            const subLabel = document.getElementById('ob-subniche-label');
+            if (subLabel) subLabel.classList.toggle('hidden', subcats.length === 0);
         }
 
         function startWizardWithNiche(vertical, subniche) {
