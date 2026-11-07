@@ -296,7 +296,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 
                 <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full border border-cyber-cyan/30 bg-cyber-cyan/10 text-cyber-cyan text-xs font-mono mb-6">
                     <span class="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse"></span>
-                    <span>AUTOMATED 7-DAY ESCALATION PIPELINE LIVE</span>
+                    <span>7-DAY ESCALATION PLAN · STAGE 1 (DMCA DRAFTS) ACTIVE</span>
                 </div>
 
                 <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white max-w-4xl mx-auto leading-tight">
@@ -358,11 +358,11 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                     </div>
                     <div class="flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-mono">
                         <i data-lucide="check-circle-2" class="w-4 h-4 text-cyber-cyan"></i>
-                        <span>Google SERP De-Indexing</span>
+                        <span>Search De-Listing Requests (planned)</span>
                     </div>
                     <div class="flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-mono">
                         <i data-lucide="check-circle-2" class="w-4 h-4 text-cyber-cyan"></i>
-                        <span>Registrar & Host Suspension</span>
+                        <span>Registrar &amp; Host Notices (planned)</span>
                     </div>
                     <div class="flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-mono">
                         <i data-lucide="check-circle-2" class="w-4 h-4 text-cyber-cyan"></i>
@@ -426,12 +426,13 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                         <span class="ag-step-dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></span>
                         <div>
                             <h3 class="ag-step-title text-base">Takedown</h3>
-                            <p class="ag-step-sub text-xs mt-1">DMCA notices, SERP de-indexing &amp; host lock</p>
+                            <p class="ag-step-sub text-xs mt-1">DMCA notice drafts sent after your confirmation; de-listing and registrar notices planned</p>
                             <ul class="ag-days">
                                 <li>Day 1 &middot; DMCA</li>
-                                <li>Day 3 &middot; De-index</li>
-                                <li>Day 7 &middot; Host lock</li>
+                                <li>Day 3 &middot; De-listing (planned)</li>
+                                <li>Day 7 &middot; Registrar (planned)</li>
                             </ul>
+                            <p class="text-[10px] mt-2 text-amber-500" data-notice-disclaimer>Similarity is not a legal determination. Review all evidence before sending.</p>
                         </div>
                     </li>
                 </ol>
@@ -996,7 +997,8 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 <div id="admin-notice-panel" class="hidden p-6 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-amber-500/30 space-y-4">
                     <div>
                         <h3 class="font-bold text-slate-900 dark:text-white text-base">Admin Notice Dispatch</h3>
-                        <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Sign in to review persisted high-confidence notice drafts. Each dispatch requires confirmation and is sent using the configured Resend account.</p>
+                        <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Sign in to review persisted high-confidence notice drafts. No notice leaves the system without an explicit, logged confirmation from a signed-in admin, unless the documented AUTO_DISPATCH_DMCA server setting is enabled; every send is recorded in the notice audit log.</p>
+                        <p class="text-xs text-amber-400 font-semibold mt-1" data-notice-disclaimer>Similarity is not a legal determination. Review all evidence before sending.</p>
                     </div>
                     <div class="flex flex-wrap gap-3">
                         <button id="admin-login-button" onclick="toggleAuthModal(true)" class="px-4 py-2 rounded-lg bg-cyber-cyan text-cyber-black font-bold text-sm">Sign in</button>
@@ -1021,26 +1023,27 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
 
                 <div class="p-6 rounded-2xl bg-[#f5f3fa] dark:bg-slate-900 border border-[#e2dcf2] dark:border-[#32214f] space-y-4">
                     <div>
-                        <h3 class="font-bold text-slate-900 dark:text-white text-base">7-Day Multi-Tier Escalation Queue</h3>
-                        <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Our automated engine escalates unresponsive hosts across 3 distinct legal tiers every 48–72 hours.</p>
+                        <h3 class="font-bold text-slate-900 dark:text-white text-base">7-Day Escalation Plan</h3>
+                        <p class="text-xs text-slate-400 light:text-slate-600 mt-1">Planned escalation stages: Day 1, Day 3 and Day 7 (gaps of 2 days, then 4 days). Today only Stage 1 (a DMCA notice draft, sent after confirmation) is implemented; Stages 2 and 3 are not yet automated.</p>
+                        <p class="text-xs text-amber-400 font-semibold mt-1" data-notice-disclaimer>Similarity is not a legal determination. Review all evidence before sending.</p>
                     </div>
 
                     <!-- Pipeline Stage Explainer -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
                         <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs light:bg-slate-100 light:border-slate-300">
-                            <div class="font-mono font-bold text-cyber-cyan">TIER 1 (DAY 1)</div>
+                            <div class="font-mono font-bold text-cyber-cyan">STAGE 1 (DAY 1)</div>
                             <div class="text-slate-300 light:text-slate-800 font-semibold mt-0.5">Initial DMCA Host Notice</div>
-                            <div class="text-slate-400 text-[11px] mt-1">Direct legal notice dispatched to server web host & cloud provider.</div>
+                            <div class="text-slate-400 text-[11px] mt-1">Notice draft is generated automatically; it is sent only after an admin confirms.</div>
                         </div>
                         <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs light:bg-slate-100 light:border-slate-300">
-                            <div class="font-mono font-bold text-amber-400">TIER 2 (DAY 3)</div>
-                            <div class="text-slate-300 light:text-slate-800 font-semibold mt-0.5">Google SERP De-Indexing</div>
-                            <div class="text-slate-400 text-[11px] mt-1">Submits search engine de-listing to wipe clone URL from Google & Bing.</div>
+                            <div class="font-mono font-bold text-amber-400">STAGE 2 (DAY 3) · PLANNED</div>
+                            <div class="text-slate-300 light:text-slate-800 font-semibold mt-0.5">Search Engine De-Listing Request</div>
+                            <div class="text-slate-400 text-[11px] mt-1">Not yet automated. Planned: a de-listing request for the clone URL, prepared for your review.</div>
                         </div>
                         <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs light:bg-slate-100 light:border-slate-300">
-                            <div class="font-mono font-bold text-rose-400">TIER 3 (DAY 7)</div>
-                            <div class="text-slate-300 light:text-slate-800 font-semibold mt-0.5">Domain Registrar Abuse Lock</div>
-                            <div class="text-slate-400 text-[11px] mt-1">Files registrar abuse notice (GoDaddy/Namecheap) to suspend domain directly.</div>
+                            <div class="font-mono font-bold text-rose-400">STAGE 3 (DAY 7) · PLANNED</div>
+                            <div class="text-slate-300 light:text-slate-800 font-semibold mt-0.5">Registrar Abuse Notice</div>
+                            <div class="text-slate-400 text-[11px] mt-1">Not yet automated. Planned: a registrar abuse notice, prepared for your review.</div>
                         </div>
                     </div>
 
@@ -1238,7 +1241,8 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs font-mono space-y-2 mb-6 max-h-60 overflow-y-auto text-slate-300">
                 <p class="text-cyber-cyan font-bold">SCAN INPUTS</p>
                 <p><strong>Target page:</strong> <span id="modal-url">No target selected</span></p>
-                <p class="text-slate-400">Verify your rights and all evidence before using any generated notice. Similarity is not a legal determination.</p>
+                <p class="text-slate-400">Verify your rights and all evidence before using any generated notice.</p>
+                <p class="text-amber-400 font-semibold" data-notice-disclaimer>Similarity is not a legal determination. Review all evidence before sending.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -1247,6 +1251,9 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                 </label>
                 <label class="text-xs text-slate-300">Abuse desk email
                     <input id="scan-abuse-email" type="email" required class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" placeholder="abuse@example.com">
+                </label>
+                <label class="text-xs text-slate-300">Infringing page URL
+                    <input id="scan-target-url" type="url" required class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" placeholder="https://copycat.example/product">
                 </label>
                 <label class="text-xs text-slate-300">Infringing image URL
                     <input id="scan-infringing-image-url" type="url" required class="mt-1 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-sm text-white" placeholder="https://example.com/image.jpg">
@@ -2102,6 +2109,59 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
             localStorage.removeItem('ag_token');
             localStorage.removeItem('ag_user');
             window.location.reload();
+        }
+
+        const SIMILARITY_DISCLAIMER = 'Similarity is not a legal determination. Review all evidence before sending.';
+
+        function openDmcaModal(url) {
+            const modal = document.getElementById('dmca-modal');
+            if (!modal) return;
+            const target = document.getElementById('modal-url');
+            if (target && url) target.textContent = url;
+            modal.classList.remove('hidden');
+        }
+
+        function closeDmcaModal() {
+            const modal = document.getElementById('dmca-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // Scans two images and prepares a PENDING draft. The server never sends from here unless an
+        // administrator has explicitly enabled AUTO_DISPATCH_DMCA (see main.send_notice_guarded).
+        async function dispatchDmcaNoticeLive() {
+            const result = document.getElementById('scan-result');
+            const draft = document.getElementById('notice-draft');
+            const show = (text) => { if (result) { result.textContent = text; result.classList.remove('hidden'); } };
+            const token = localStorage.getItem('ag_token');
+            if (!token) { show('Sign in to a backend account to run a scan.'); return; }
+            const value = (id) => (document.getElementById(id) || {}).value || '';
+            const payload = {
+                store_id: Number(value('scan-store-id')),
+                host_abuse_email: value('scan-abuse-email'),
+                target_infringing_url: value('scan-target-url'),
+                infringing_image_url: value('scan-infringing-image-url'),
+                original_image_url: value('scan-original-image-url')
+            };
+            if (!payload.store_id || !payload.target_infringing_url || !payload.infringing_image_url || !payload.original_image_url) {
+                show('Store ID, target page URL and both image URLs are required.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/v1/scan/execute-takedown', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Scan failed.');
+                show(`${data.message} ${data.disclaimer || SIMILARITY_DISCLAIMER}`);
+                if (draft && data.notice_draft) {
+                    draft.textContent = data.notice_draft.html || JSON.stringify(data.notice_draft, null, 2);
+                    draft.classList.remove('hidden');
+                }
+            } catch (err) {
+                show(err.message || 'Scan failed.');
+            }
         }
 
         async function loadAdminNotices() {

@@ -50,6 +50,7 @@ from customer_auth import (
     verify_customer_token,
 )
 from dmca_dispatcher import (
+    DmcaDeliveryError,
     DmcaDeliveryUnknownError,
     DmcaProviderRejectedError,
     WhoisLookupError,
@@ -113,6 +114,21 @@ class NoticeModel(Base):
     dispatched_at = Column(DateTime(timezone=True), nullable=True)
     dispatched_by = Column(String, nullable=True)
     provider_message_id = Column(String, nullable=True)
+
+
+class NoticeAuditLogModel(Base):
+    """Append-only record of every outbound legal notice action."""
+
+    __tablename__ = "dmca_notice_audit_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    event = Column(String, nullable=False)
+    user = Column(String, nullable=False)
+    target = Column(String, nullable=False)
+    recipient = Column(String, nullable=False)
+    notice_id = Column(String(36), nullable=False, index=True)
+    status = Column(String, nullable=False)
 
 
 class CustomerAccountModel(Base):
@@ -809,6 +825,95 @@ def list_admin_notices(
     ]
 
 
+class DispatchNotAuthorized(Exception):
+    """Raised when an outbound notice lacks explicit confirmation or an enabled automation setting."""
+
+
+class DispatchConflict(Exception):
+    def __init__(self, status: str):
+        super().__init__(status)
+        self.status = status
+
+
+SIMILARITY_DISCLAIMER = "Similarity is not a legal determination. Review all evidence before sending."
+
+
+def _add_notice_audit(db: Session, notice: NoticeModel, *, user: str, event: str, status: str) -> None:
+    db.add(
+        NoticeAuditLogModel(
+            event=event,
+            user=user,
+            target=notice.target_infringing_url,
+            recipient=notice.recipient,
+            notice_id=notice.id,
+            status=status,
+        )
+    )
+
+
+def send_notice_guarded(
+    db: Session,
+    notice: NoticeModel,
+    *,
+    api_key: str,
+    sender_email: str,
+    actor: str,
+    confirmed: bool = False,
+    automated: bool = False,
+) -> tuple[str | None, DmcaDeliveryError | None]:
+    """The only code path that sends a legal notice.
+
+    A send needs either an explicit confirmation from a named user or the documented
+    AUTO_DISPATCH_DMCA setting. The authorization and the outcome are both written to the audit log.
+    Returns (provider_message_id, failure); failure is None when the provider accepted the notice.
+    """
+    if automated:
+        if not auto_dispatch_enabled():
+            raise DispatchNotAuthorized("Automatic dispatch is disabled; set AUTO_DISPATCH_DMCA to enable it.")
+        authorization_event = "auto_dispatch_authorized"
+    else:
+        if confirmed is not True or not (actor or "").strip():
+            raise DispatchNotAuthorized("Explicit dispatch confirmation from a signed-in user is required.")
+        authorization_event = "dispatch_confirmed"
+
+    claimed = (
+        db.query(NoticeModel)
+        .filter(NoticeModel.id == notice.id, NoticeModel.status == "PENDING")
+        .update({NoticeModel.status: "DISPATCHING"}, synchronize_session=False)
+    )
+    if claimed != 1:
+        db.rollback()
+        db.refresh(notice)
+        raise DispatchConflict(notice.status)
+    _add_notice_audit(db, notice, user=actor, event=authorization_event, status="DISPATCHING")
+    db.commit()
+
+    provider_message_id = None
+    failure: DmcaDeliveryError | None = None
+    try:
+        provider_message_id = send_dmca_notice(
+            api_key=api_key,
+            sender_email=sender_email,
+            recipient=notice.recipient,
+            subject=notice.subject,
+            html=notice.body_html,
+        )
+    except DmcaProviderRejectedError as exc:
+        notice.status = "DISPATCH_FAILED"
+        failure = exc
+    except DmcaDeliveryUnknownError as exc:
+        notice.status = "DISPATCH_UNKNOWN"
+        failure = exc
+    else:
+        notice.status = "DISPATCHED"
+        notice.dispatched_at = datetime.now(timezone.utc)
+        notice.dispatched_by = actor
+        notice.provider_message_id = provider_message_id
+    _add_notice_audit(db, notice, user=actor, event="dispatch_result", status=notice.status)
+    db.commit()
+    return provider_message_id, failure
+
+
 @app.post("/api/v1/admin/dispatch-notice/{notice_id}")
 def dispatch_dmca_notice(
     notice_id: str,
@@ -840,42 +945,24 @@ def dispatch_dmca_notice(
             detail="The configured email sender differs from the sender on this notice.",
         )
 
-    claimed = (
-        db.query(NoticeModel)
-        .filter(NoticeModel.id == notice_id, NoticeModel.status == "PENDING")
-        .update({NoticeModel.status: "DISPATCHING"}, synchronize_session=False)
-    )
-    if claimed != 1:
-        db.rollback()
-        db.refresh(notice)
-        raise HTTPException(
-            status_code=409,
-            detail=f"Notice cannot be dispatched from status {notice.status}.",
-        )
-    db.commit()
-
     try:
-        provider_message_id = send_dmca_notice(
+        provider_message_id, failure = send_notice_guarded(
+            db,
+            notice,
             api_key=api_key,
             sender_email=configured_sender,
-            recipient=notice.recipient,
-            subject=notice.subject,
-            html=notice.body_html,
+            actor=admin_email,
+            confirmed=data.confirm_dispatch,
         )
-    except DmcaProviderRejectedError as exc:
-        notice.status = "DISPATCH_FAILED"
-        db.commit()
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    except DmcaDeliveryUnknownError as exc:
-        notice.status = "DISPATCH_UNKNOWN"
-        db.commit()
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    notice.status = "DISPATCHED"
-    notice.dispatched_at = datetime.now(timezone.utc)
-    notice.dispatched_by = admin_email
-    notice.provider_message_id = provider_message_id
-    db.commit()
+    except DispatchNotAuthorized as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except DispatchConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Notice cannot be dispatched from status {exc.status}.",
+        ) from exc
+    if failure is not None:
+        raise HTTPException(status_code=502, detail=str(failure)) from failure
 
     return {
         "success": True,
@@ -906,7 +993,13 @@ def auto_dispatch_enabled() -> bool:
 
 
 def auto_dispatch_notice(db: Session, notice_id: str) -> str:
-    """Send a PENDING notice without admin review. Returns the resulting status."""
+    """Send a PENDING notice without per-notice review, only when AUTO_DISPATCH_DMCA is enabled.
+
+    Returns the resulting status.
+    TODO(legal): the automated DMCA workflow must be reviewed by a qualified lawyer before launch.
+    """
+    if not auto_dispatch_enabled():
+        return "PENDING"
     try:
         api_key, configured_sender = get_resend_settings()
     except (RuntimeError, ValueError) as exc:
@@ -917,36 +1010,21 @@ def auto_dispatch_notice(db: Session, notice_id: str) -> str:
     if not notice or notice.sender != configured_sender:
         return "PENDING"
 
-    claimed = (
-        db.query(NoticeModel)
-        .filter(NoticeModel.id == notice_id, NoticeModel.status == "PENDING")
-        .update({NoticeModel.status: "DISPATCHING"}, synchronize_session=False)
-    )
-    db.commit()
-    if claimed != 1:
-        db.refresh(notice)
-        return notice.status
-
     try:
-        provider_message_id = send_dmca_notice(
+        _, failure = send_notice_guarded(
+            db,
+            notice,
             api_key=api_key,
             sender_email=configured_sender,
-            recipient=notice.recipient,
-            subject=notice.subject,
-            html=notice.body_html,
+            actor="auto-dispatch",
+            automated=True,
         )
-    except DmcaProviderRejectedError as exc:
-        logger.warning("Auto-dispatch rejected for notice %s: %s", notice_id, exc)
-        notice.status = "DISPATCH_FAILED"
-    except DmcaDeliveryUnknownError as exc:
-        logger.warning("Auto-dispatch outcome unknown for notice %s: %s", notice_id, exc)
-        notice.status = "DISPATCH_UNKNOWN"
-    else:
-        notice.status = "DISPATCHED"
-        notice.dispatched_at = datetime.now(timezone.utc)
-        notice.dispatched_by = "auto-dispatch"
-        notice.provider_message_id = provider_message_id
-    db.commit()
+    except DispatchNotAuthorized:
+        return "PENDING"
+    except DispatchConflict as exc:
+        return exc.status
+    if failure is not None:
+        logger.warning("Auto-dispatch for notice %s ended as %s", notice_id, notice.status)
     return notice.status
 
 
@@ -1056,6 +1134,7 @@ def execute_automated_scan(
         "notice_status": notice_status,
         "notice_draft": notice_draft,
         "notice_id": notice_id,
+        "disclaimer": SIMILARITY_DISCLAIMER,
         "message": (
             _scan_message(notice_draft, notice_status)
         ),

@@ -83,6 +83,9 @@ def get_resend_settings() -> tuple[str, str]:
     return api_key, _validate_email_address(sender_email)
 
 
+# Do not call this directly: main.send_notice_guarded is the only permitted caller; it enforces
+# confirmation and audit logging.
+# TODO(legal): the automated DMCA workflow must be reviewed by a qualified lawyer before launch.
 def send_dmca_notice(
     *,
     api_key: str,
