@@ -1942,9 +1942,7 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
             if (recEl) recEl.classList.add('hidden');
         }
 
-        let diagnosticTimer = null;
-
-        function runDiagnosticAndRecommend() {
+        async function runDiagnosticAndRecommend() {
             const domain = normalizeStoreDomain(document.getElementById('ob-url')?.value || '');
             if (!domain || !domain.includes('.')) {
                 alert('Please enter a valid website URL, e.g. https://yourstore.com');
@@ -1956,49 +1954,66 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
             const statusText = document.getElementById('scan-status-text');
             const runBtn = document.getElementById('btn-run-scan');
             const recBox = document.getElementById('wizard-recommendation');
+            const setText = (id, text) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = text;
+            };
+            const log = (message) => {
+                if (!logsContainer) return;
+                const line = document.createElement('div');
+                line.textContent = `[INFO] ${message}`;
+                logsContainer.appendChild(line);
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            };
 
-            if (diagnosticTimer) clearInterval(diagnosticTimer);
             if (recBox) recBox.classList.add('hidden');
             if (scanBox) scanBox.classList.remove('hidden');
             if (logsContainer) logsContainer.replaceChildren();
-            if (statusText) statusText.textContent = 'INITIALIZING AUTOMATED DIAGNOSTIC SCAN...';
+            if (statusText) statusText.textContent = 'INSPECTING YOUR PUBLIC STORE PAGE...';
             if (runBtn) runBtn.disabled = true;
+            log(`Requesting a server-side inspection of ${domain}`);
 
-            const logs = [
-                'Connecting to target endpoint...',
-                'Resolving SSL certificate and DNS records...',
-                'Reviewing public product imagery and metadata...',
-                'Preparing catalog index for protection...',
-                'Diagnostic complete. Generating recommended plan...'
-            ];
-
-            let i = 0;
-            diagnosticTimer = setInterval(() => {
-                if (i < logs.length) {
-                    if (logsContainer) {
-                        const line = document.createElement('div');
-                        line.textContent = `[INFO] ${logs[i]}`;
-                        logsContainer.appendChild(line);
-                        logsContainer.scrollTop = logsContainer.scrollHeight;
-                    }
-                    i++;
-                    return;
-                }
-                clearInterval(diagnosticTimer);
-                diagnosticTimer = null;
-                if (runBtn) runBtn.disabled = false;
-                if (statusText) statusText.textContent = 'SCAN COMPLETE — RECOMMENDED PLAN READY';
+            try {
+                const response = await fetch('/api/v1/inspect-domain', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: domain })
+                });
+                let data = {};
+                try { data = await response.json(); } catch (_) { /* non-JSON error body */ }
+                if (!response.ok) throw new Error(data.detail || 'The inspection service is unavailable right now.');
+                if (statusText) statusText.textContent = data.valid ? 'INSPECTION COMPLETE: RECOMMENDATION READY' : 'INSPECTION COMPLETE: NO STORE DETECTED';
+                log('Inspection finished.');
                 if (!recBox) return;
                 recBox.classList.remove('hidden');
-                const setText = (id, text) => {
-                    const el = document.getElementById(id);
-                    if (el) el.textContent = text;
-                };
-                setText('rec-plan-name', 'Pro Defense Tier');
-                setText('rec-plan-price', '7-Day Free Trial, then 6-Month plan from $399');
-                setText('rec-plan-assets', 'Analyzed Domain: ' + domain);
-                setText('rec-plan-reason', 'Optimized for catalog protection against automated scrapers and copycat listings.');
-            }, 400);
+                if (!data.valid) {
+                    setText('rec-plan-name', 'No recommendation');
+                    setText('rec-plan-price', '');
+                    setText('rec-plan-assets', 'Analyzed Domain: ' + domain);
+                    setText('rec-plan-reason', data.message || 'This page does not appear to be a store or product catalog.');
+                    return;
+                }
+                const cfg = window.AG_CONFIG;
+                setText('rec-plan-name', data.recommended_tier || 'Recommended plan');
+                setText('rec-plan-price', cfg
+                    ? `7-Day Free Trial, then a 6-Month plan: Growth ${cfg.planText('growth', 'amount')} or Pro ${cfg.planText('pro', 'amount')}`
+                    : '7-Day Free Trial, then a 6-Month plan');
+                setText('rec-plan-assets', `Analyzed Domain: ${domain} · about ${data.catalog_images_indexed} catalog images detected`);
+                setText('rec-plan-category', data.detected_category ? `Detected category: ${data.detected_category}` : '');
+                setText('rec-plan-reason', data.inspection_note || 'Based on the number of product images found on your public pages.');
+            } catch (err) {
+                if (statusText) statusText.textContent = 'INSPECTION FAILED';
+                log(err.message || 'Inspection failed.');
+                if (recBox) {
+                    recBox.classList.remove('hidden');
+                    setText('rec-plan-name', 'No recommendation');
+                    setText('rec-plan-price', '');
+                    setText('rec-plan-assets', 'Analyzed Domain: ' + domain);
+                    setText('rec-plan-reason', err.message || 'Inspection failed.');
+                }
+            } finally {
+                if (runBtn) runBtn.disabled = false;
+            }
         }
 
         function updateSubcatOptions() {

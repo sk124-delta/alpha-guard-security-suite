@@ -270,35 +270,48 @@ def _normalize_inspection_url(value: str) -> str:
     return normalized
 
 
-def _fetch_public_page(url: str) -> tuple[bytes, str]:
-    _validate_public_url(url)
-    with public_only_session() as session:
-        with session.get(
-            url,
-            headers={"User-Agent": "AlphaGuard-Audit-Bot/1.0"},
-            timeout=DOMAIN_REQUEST_TIMEOUT,
-            allow_redirects=False,
-            stream=True,
-        ) as response:
-            if 300 <= response.status_code < 400:
-                raise ValueError("Domain redirects are not followed; inspect the destination directly.")
-            response.raise_for_status()
-            content_length = response.headers.get("Content-Length")
-            if content_length:
-                try:
-                    if int(content_length) > MAX_DOMAIN_PAGE_BYTES:
-                        raise ValueError("Domain page exceeds the inspection size limit.")
-                except ValueError as exc:
-                    if "size limit" in str(exc):
-                        raise
-                    raise ValueError("Domain response has an invalid Content-Length.") from exc
+MAX_DOMAIN_REDIRECTS = 3
 
-            content = bytearray()
-            for chunk in response.iter_content(chunk_size=64 * 1024):
-                content.extend(chunk)
-                if len(content) > MAX_DOMAIN_PAGE_BYTES:
-                    raise ValueError("Domain page exceeds the inspection size limit.")
-            return bytes(content), response.headers.get("Content-Type", "").lower()
+
+def _fetch_public_page(url: str) -> tuple[bytes, str]:
+    current_url = url
+    with public_only_session() as session:
+        for hop in range(MAX_DOMAIN_REDIRECTS + 1):
+            # Every hop (including the first) is re-validated before any request is made.
+            _validate_public_url(current_url)
+            with session.get(
+                current_url,
+                headers={"User-Agent": "AlphaGuard-Audit-Bot/1.0"},
+                timeout=DOMAIN_REQUEST_TIMEOUT,
+                allow_redirects=False,
+                stream=True,
+            ) as response:
+                if 300 <= response.status_code < 400:
+                    location = response.headers.get("Location")
+                    if not location:
+                        raise ValueError("Domain redirect did not include a destination.")
+                    if hop >= MAX_DOMAIN_REDIRECTS:
+                        raise ValueError("Domain redirected too many times.")
+                    current_url = urljoin(current_url, location)
+                    continue
+                response.raise_for_status()
+                content_length = response.headers.get("Content-Length")
+                if content_length:
+                    try:
+                        if int(content_length) > MAX_DOMAIN_PAGE_BYTES:
+                            raise ValueError("Domain page exceeds the inspection size limit.")
+                    except ValueError as exc:
+                        if "size limit" in str(exc):
+                            raise
+                        raise ValueError("Domain response has an invalid Content-Length.") from exc
+
+                content = bytearray()
+                for chunk in response.iter_content(chunk_size=64 * 1024):
+                    content.extend(chunk)
+                    if len(content) > MAX_DOMAIN_PAGE_BYTES:
+                        raise ValueError("Domain page exceeds the inspection size limit.")
+                return bytes(content), response.headers.get("Content-Type", "").lower()
+    raise ValueError("Domain redirected too many times.")
 
 
 Base.metadata.create_all(bind=engine)
