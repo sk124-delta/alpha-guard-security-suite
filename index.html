@@ -55,6 +55,7 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="src/trial-status.js"></script>
     <style>
         /* ---- Design tokens ---- */
         :root, html.dark {
@@ -830,9 +831,9 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                             </span>
                         </div>
                         <div class="text-xs text-slate-400 light:text-slate-600 mt-0.5 flex items-center space-x-3">
-                            <span>Plan: <strong id="dash-plan-badge" class="text-cyber-cyan">Free Trial</strong></span>
-                            <span>•</span>
-                            <span>Trial Status: <strong id="dash-trial-status" class="text-emerald-400">7 Days Free Active</strong></span>
+                            <span>Plan: <strong id="dash-plan-badge" class="text-cyber-cyan">No plan</strong></span>
+                            <span id="dash-trial-sep" aria-hidden="true">•</span>
+                            <span id="dash-trial-status-wrap"><strong id="dash-trial-status" class="text-slate-300">No active subscription</strong></span>
                         </div>
                     </div>
                 </div>
@@ -855,8 +856,8 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                         🛡️
                     </div>
                     <div>
-                        <h4 class="text-base font-bold text-slate-900 dark:text-white">Your 7-day free trial has ended</h4>
-                        <p class="text-xs text-slate-300 light:text-slate-600 mt-0.5">Complete your 6-month activation to keep 24/7 continuous visual hashing &amp; automated host enforcement running.</p>
+                        <h4 id="trial-expired-headline" class="text-base font-bold text-slate-900 dark:text-white">Your 7-day free trial has ended</h4>
+                        <p class="text-xs text-slate-300 light:text-slate-600 mt-0.5">Complete your 6-month activation to keep daily visual hashing &amp; match review running.</p>
                     </div>
                 </div>
 
@@ -1175,8 +1176,8 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
                         <label class="block text-xs font-mono text-slate-300 light:text-slate-700">SUBSCRIPTION STATUS</label>
                         <div class="flex items-center justify-between text-xs">
                             <div>
-                                <div class="font-bold text-white light:text-slate-900">Current Plan: 7-Day Free Trial</div>
-                                <div class="text-slate-400">No card required - $0 charged. Nothing to cancel; the trial ends automatically after 7 days.</div>
+                                <div id="settings-plan-title" class="font-bold text-white light:text-slate-900">No active subscription</div>
+                                <div id="settings-plan-detail" class="text-slate-400">Start a 7-day free trial or activate a 6-month plan.</div>
                             </div>
                             <a href="https://link.payoneer.com/Token?t=102EE28B56F74138B5DEA427401260A4&amp;src=pl" class="px-3 py-1.5 rounded-lg border border-cyber-cyan/40 text-cyber-cyan hover:bg-cyber-cyan/10 font-mono text-xs">
                                 Activate 6-Month Plan
@@ -1745,15 +1746,26 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
         }
 
         function updateTrialStatus() {
-            const created = Date.parse(currentSessionUser?.created_at || '');
+            if (!window.AG_TRIAL) return;
+            const status = window.AG_TRIAL.deriveTrialStatus(isAdminSession() ? null : currentSessionUser);
             const banner = document.getElementById('trial-expired-banner');
+            const wrap = document.getElementById('dash-trial-status-wrap');
+            const sep = document.getElementById('dash-trial-sep');
             const label = document.getElementById('dash-trial-status');
-            if (!banner || !label || Number.isNaN(created) || isAdminSession()) return;
-            const daysLeft = 7 - Math.floor((Date.now() - created) / 86400000);
-            const expired = daysLeft <= 0;
-            banner.classList.toggle('hidden', !expired);
-            label.textContent = expired ? 'Trial Ended - Activate 6-Month Plan' : `${daysLeft} Day${daysLeft === 1 ? '' : 's'} Left (No Card Required)`;
-            label.className = expired ? 'text-amber-400' : 'text-emerald-400';
+            const plan = document.getElementById('dash-plan-badge');
+            if (plan) plan.textContent = status.planLabel;
+            // Exactly one status message: the banner replaces the header text when the trial has ended.
+            if (banner) banner.classList.toggle('hidden', !status.showBanner);
+            if (wrap) wrap.classList.toggle('hidden', status.showBanner);
+            if (sep) sep.classList.toggle('hidden', status.showBanner);
+            if (label) {
+                label.textContent = status.headline;
+                label.className = status.state === 'trial_active' || status.state === 'paid_active' ? 'text-emerald-400' : 'text-slate-300';
+            }
+            const title = document.getElementById('settings-plan-title');
+            const detail = document.getElementById('settings-plan-detail');
+            if (title) title.textContent = `Current Plan: ${status.planLabel}`;
+            if (detail) detail.textContent = status.detail;
         }
 
         async function getAuthModule() {
