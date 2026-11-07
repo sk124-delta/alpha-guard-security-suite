@@ -231,6 +231,21 @@ html.light #explorer .cat-tab h3, html.light [id^="dash-sec-"] h3 { color: var(-
 .ag-svg-arrow { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .ag-svg-sub { fill: var(--muted); font: 500 12px Inter, system-ui, sans-serif; }
 </style>
+<style id="evidence-file">
+/* ===== Evidence File design system ===== */
+/* Self-hosted fonts (no third-party request; no CSP is configured in this project). */
+@font-face { font-family: "Fraunces"; src: url("assets/fonts/fraunces.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("assets/fonts/inter.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
+:root {
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+html body#appBody { font-family: var(--font-body); }
+html[class] .font-mono { font-family: var(--font-mono); }
+html[class] :is(h1, h2) { font-family: var(--font-display); }
+</style>
 </head>
 <body class="bg-[#f0eef6] dark:bg-[#100a1d] text-slate-800 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-300" id="appBody">
 
