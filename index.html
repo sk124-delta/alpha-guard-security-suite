@@ -350,6 +350,26 @@ html[class] [class*="bg-emerald-500/10"] { background: transparent; border: 1px 
 html[class] .card-btn, html[class] .auth-submit-button { background-color: var(--stamp) !important; color: var(--on-stamp) !important; border: 1px solid var(--stamp); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; min-height: 44px; }
 html[class] .card-btn:hover, html[class] .auth-submit-button:hover { background-color: var(--stamp-hover) !important; }
 
+/* Dashboard: ledger rows and document tables */
+html[class] #dash-sec-overview > .grid:first-child { display: block; border-bottom: 1px solid var(--rule); }
+html[class] #dash-sec-overview > .grid:first-child > div { display: grid; grid-template-columns: 1fr auto; align-items: baseline; column-gap: var(--sp-4); background: transparent !important; border: 0 !important; border-top: 1px solid var(--rule-soft) !important; padding: var(--sp-3) 0; }
+html[class] #dash-sec-overview > .grid:first-child > div > :first-child { grid-column: 1; grid-row: 1; }
+html[class] #dash-sec-overview > .grid:first-child > div > :first-child i, html[class] #dash-sec-overview > .grid:first-child > div > :first-child svg { display: none; }
+html[class] #dash-sec-overview > .grid:first-child > div > [id^="stat-"] { grid-column: 2; grid-row: 1; margin: 0; font-family: var(--font-mono); font-size: 2rem; line-height: 1.1; text-align: right; color: var(--ink); }
+html[class] #dash-sec-overview > .grid:first-child > div > :last-child { grid-column: 1 / -1; grid-row: 2; color: var(--ink-2); }
+html[class] [id^="dash-sec-"] .overflow-x-auto { border: 1px solid var(--ink); background: var(--paper); }
+html[class] table thead { background: var(--paper-2) !important; color: var(--ink) !important; border-bottom: 1px solid var(--ink) !important; }
+html[class] table :is(td, th) { border-color: var(--rule-soft); }
+html[class] table tbody tr { border-bottom: 1px solid var(--rule-soft); }
+html[class] table td { font-family: var(--font-mono); color: var(--ink); }
+html[class] table td[colspan] { font-family: var(--font-body); color: var(--ink-2); font-style: italic; }
+html[class] [data-notice-disclaimer] { color: var(--ink) !important; font-weight: 500; }
+html[class] [id^="dash-sec-"] div.rounded-2xl, html[class] #page-onboarding div.rounded-2xl { border-color: var(--rule-soft); background-color: var(--paper-2); }
+/* Modals: solid paper panel with a visible rule, scrim without blur */
+html[class] [role="dialog"] > div { background: var(--paper) !important; border: 1px solid var(--ink) !important; color: var(--ink); }
+html[class] [role="dialog"] { background: rgba(26, 26, 26, 0.6); }
+html[class] [role="dialog"] button[aria-label^="Close"] { color: var(--ink); min-width: 44px; min-height: 44px; }
+/* Takedown schedule timeline (Day 1 / 3 / 7, matching the scheduler) */
 html[class] .ag-days { display: block; margin-top: var(--sp-3); padding-left: var(--sp-4); border-left: 1px solid var(--ink); text-align: left; transform-origin: top; }
 html[class] .ag-days li { display: block; border: 0; border-radius: 0; padding: 4px 0 4px var(--sp-3); position: relative; font: 500 12px/1.4 var(--font-mono); color: var(--ink); }
 html[class] .ag-days li::before { content: ""; position: absolute; left: calc(-1 * var(--sp-4) - 3px); top: 10px; width: 5px; height: 5px; background: var(--ink); }
@@ -1099,7 +1119,7 @@ html.dark .stamp { mix-blend-mode: screen; }
                             <path d="M48 16l24 8.5v17.5c0 15.500-9.500 27-24 33-14.500-6-24-17.500-24-33V24.500z" stroke-width="1.5" opacity=".55"/>
                             <path d="M35 47l9 9 17-19" stroke-width="4"/>
                         </svg>
-                        <span class="text-[11px] font-mono font-bold text-purple-600 dark:text-purple-400 tracking-wide">PROTECTION ACTIVE</span>
+                        <span class="text-[11px] font-mono font-bold text-purple-600 dark:text-purple-400 tracking-wide">DAILY SCAN SCHEDULE</span>
                     </div>
                     <div class="flex-1 w-full">
                         <h3 class="font-bold text-slate-900 dark:text-white text-sm mb-4">Enforcement Lifecycle</h3>

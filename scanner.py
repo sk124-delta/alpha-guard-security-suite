@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import socket
+import time
 from urllib.parse import urlsplit
 import warnings
 
@@ -22,6 +23,8 @@ SERPAPI_ENDPOINT = "https://serpapi.com/search"
 SERPAPI_TIMEOUT = (5, 30)
 MAX_IMAGES_PER_STORE = 5
 MATCH_THRESHOLD = 90.0
+# Stop starting new stores once a scan run has taken this long (serverless-safe budget).
+MAX_SCAN_SECONDS = 240
 
 logger = logging.getLogger("alphaguard.scanner")
 
@@ -189,14 +192,37 @@ def run_scheduled_scans(session_factory, store_model, notice_model, fetch_page, 
     """Scan every connected store's public Shopify catalog and queue PENDING DMCA drafts.
 
     Dependencies are injected by main.py to avoid a circular import. Notices are never dispatched here.
+    Stops starting new stores after MAX_SCAN_SECONDS and reports how many were skipped.
     """
-    summary = {"stores": 0, "images": 0, "notices": 0, "errors": 0}
+    summary = {"stores": 0, "images": 0, "notices": 0, "errors": 0, "skipped_stores": 0}
+    started = time.monotonic()
     db = session_factory()
     try:
-        for store in db.query(store_model).all():
+        stores = db.query(store_model).all()
+        for index, store in enumerate(stores):
+            if time.monotonic() - started > MAX_SCAN_SECONDS:
+                summary["skipped_stores"] = len(stores) - index
+                logger.warning(
+                    "Scan time limit of %s seconds reached; skipped %s store(s).",
+                    MAX_SCAN_SECONDS,
+                    summary["skipped_stores"],
+                )
+                break
+
             summary["stores"] += 1
             try:
+                if not store.store_url:
+                    summary["errors"] += 1
+                    logger.warning("Skipped store %s: no store URL is set.", store.id)
+                    continue
+
                 base = f"https://{store.store_url}" if "://" not in store.store_url else store.store_url
+                own_host = urlsplit(base).hostname
+                if not own_host:
+                    summary["errors"] += 1
+                    logger.warning("Skipped store %s: store URL has no valid hostname.", store.id)
+                    continue
+
                 body, ctype = fetch_page(base.rstrip("/") + "/products.json?limit=50")
                 if "json" not in ctype:
                     continue
@@ -204,7 +230,6 @@ def run_scheduled_scans(session_factory, store_model, notice_model, fetch_page, 
                 originals = [
                     p["images"][0]["src"] for p in products if p.get("images") and p["images"][0].get("src")
                 ][:MAX_IMAGES_PER_STORE]
-                own_host = urlsplit(base).hostname
 
                 for original in originals:
                     summary["images"] += 1
@@ -217,7 +242,7 @@ def run_scheduled_scans(session_factory, store_model, notice_model, fetch_page, 
                         continue
                     for match in matches:
                         host = urlsplit(match["url"]).hostname
-                        if not host or host == own_host or host.endswith("." + own_host):
+                        if not host or not own_host or host == own_host or host.endswith("." + own_host):
                             continue
                         try:
                             similarity = compare_hashes(original_hash, compute_image_hash(match["url"]))

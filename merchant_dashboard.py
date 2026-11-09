@@ -13,19 +13,31 @@ import requests
 import streamlit as st
 
 API_URL = os.getenv("ALPHAGUARD_API_URL", "http://127.0.0.1:8000").rstrip("/")
-REQUEST_TIMEOUT = (3, 15)
+DEFAULT_TIMEOUT = (3, 15)
+UPLOAD_TIMEOUT = (3, 120)
+NOTICE_COLUMNS = [
+    "notice_id",
+    "created_at",
+    "target_infringing_url",
+    "similarity_score",
+    "status",
+    "recipient",
+]
 
 st.set_page_config(page_title="AlphaGuard Dashboard", page_icon="🛡️", layout="wide")
 
 
 def api_request(method: str, path: str, **kwargs) -> requests.Response:
-    headers = kwargs.pop("headers", {})
+    """Call the API with the session token.
+
+    A timeout passed by the caller overrides the default instead of conflicting with it.
+    """
+    headers = dict(kwargs.pop("headers", None) or {})
     token = st.session_state.get("token")
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    return requests.request(
-        method, f"{API_URL}{path}", headers=headers, timeout=REQUEST_TIMEOUT, **kwargs
-    )
+    kwargs.setdefault("timeout", DEFAULT_TIMEOUT)
+    return requests.request(method, f"{API_URL}{path}", headers=headers, **kwargs)
 
 
 def clear_session() -> None:
@@ -90,7 +102,8 @@ def register_store(email: str, password: str, store_name: str, store_url: str) -
     detail = body.get("detail") if isinstance(body, dict) else None
     if isinstance(detail, list):
         return "Please check your details: " + "; ".join(
-            str(item.get("msg", "invalid value")) for item in detail
+            str(item.get("msg", "invalid value")) if isinstance(item, dict) else "invalid value"
+            for item in detail
         )
     return detail if isinstance(detail, str) else f"Registration failed (HTTP {response.status_code})."
 
@@ -110,6 +123,18 @@ def load_notices() -> list[dict] | None:
         st.error("The API returned an unexpected response.")
         return None
     return notices
+
+
+def notices_to_frame(notices: list[dict]) -> pd.DataFrame:
+    """Build a notice table with every expected column present, even when empty."""
+    frame = pd.DataFrame(notices)
+    for column in NOTICE_COLUMNS:
+        if column not in frame:
+            frame[column] = None
+    frame["status"] = frame["status"].fillna("UNKNOWN").astype(str)
+    if not frame.empty:
+        frame["created_at"] = pd.to_datetime(frame["created_at"], errors="coerce")
+    return frame
 
 
 if "token" not in st.session_state:
@@ -183,7 +208,7 @@ if page == "Protect Assets":
                                 uploaded_file.type,
                             )
                         },
-                        timeout=(3, 120),
+                        timeout=UPLOAD_TIMEOUT,
                     )
                 except requests.RequestException:
                     st.error(f"Could not reach the API at {API_URL}.")
@@ -245,9 +270,7 @@ notices = load_notices()
 if notices is None:
     st.stop()
 
-frame = pd.DataFrame(notices)
-if not frame.empty:
-    frame["created_at"] = pd.to_datetime(frame["created_at"])
+frame = notices_to_frame(notices)
 
 if page == "Overview":
     st.subheader("Notice overview")
@@ -266,7 +289,9 @@ if page == "Overview":
         st.caption("Showing the 100 most recent notices.")
         st.divider()
         st.subheader("Notices created per day")
-        per_day = frame.groupby(frame["created_at"].dt.date).size().rename("Notices")
+        per_day = frame.dropna(subset=["created_at"]).groupby(
+            frame["created_at"].dt.date
+        ).size().rename("Notices")
         st.bar_chart(per_day)
         st.subheader("Notices by status")
         st.bar_chart(counts)
@@ -278,16 +303,7 @@ elif page == "Notice Log":
     else:
         statuses = sorted(frame["status"].unique())
         chosen = st.multiselect("Status", statuses, default=statuses)
-        view = frame[frame["status"].isin(chosen)][
-            [
-                "notice_id",
-                "created_at",
-                "target_infringing_url",
-                "similarity_score",
-                "status",
-                "recipient",
-            ]
-        ].rename(
+        view = frame[frame["status"].isin(chosen)][NOTICE_COLUMNS].rename(
             columns={
                 "notice_id": "Notice ID",
                 "created_at": "Created",
