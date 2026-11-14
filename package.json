@@ -1,8 +1,5 @@
 {
   "scripts": {
     "test": "node --test \"tests/*.test.js\""
-  },
-  "dependencies": {
-    "firebase": "^13.1.0"
   }
 }

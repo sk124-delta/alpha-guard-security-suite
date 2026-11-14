@@ -1,33 +1,65 @@
-// Single source of truth for trial / subscription status.
-// Inputs: the signed-in user's trial start (created_at) and subscription state
-// (app_metadata.subscription_status === 'active', set by the billing side, never by the client).
+// Single source of truth for trial and subscription status.
+// Reads only from the user object: created_at (trial start) and app_metadata.subscription_status.
+// Only the server or billing side can set app_metadata; the browser never writes these values.
 (function (root) {
     const TRIAL_DAYS = 7;
     const DAY_MS = 86400000;
 
+    const NO_PLAN = {
+        state: 'none',
+        planLabel: 'No plan',
+        headline: 'No active subscription',
+        detail: 'Sign in to see your plan.',
+        daysLeft: 0,
+        showBanner: false
+    };
+
+    function nowMillis(now) {
+        if (typeof now === 'number') return now;
+        if (now instanceof Date) return now.getTime();
+        return Date.now();
+    }
+
     function deriveTrialStatus(user, now) {
-        const nowMs = typeof now === 'number' ? now : (now instanceof Date ? now.getTime() : Date.now());
-        if (!user) {
-            return { state: 'none', planLabel: 'No plan', headline: 'No active subscription', detail: 'Sign in or start a 7-day free trial.', daysLeft: 0, showBanner: false };
-        }
+        if (!user) return { ...NO_PLAN };
+
         const subscription = user.app_metadata && user.app_metadata.subscription_status;
         if (subscription === 'active') {
-            return { state: 'paid_active', planLabel: 'Paid plan', headline: 'Subscription active', detail: 'Your paid plan is active.', daysLeft: 0, showBanner: false };
+            return {
+                state: 'paid_active',
+                planLabel: 'Paid plan',
+                headline: 'Subscription active',
+                detail: 'Your paid plan is active.',
+                daysLeft: 0,
+                showBanner: false
+            };
         }
+
         const start = Date.parse(user.created_at || '');
         if (Number.isNaN(start)) {
-            return { state: 'none', planLabel: 'No plan', headline: 'No active subscription', detail: 'Start a 7-day free trial or activate a 6-month plan.', daysLeft: 0, showBanner: false };
+            return { ...NO_PLAN, detail: 'Your account start date is unavailable. Contact support.' };
         }
-        const daysLeft = Math.max(0, Math.ceil((start + TRIAL_DAYS * DAY_MS - nowMs) / DAY_MS));
-        if (daysLeft <= 0) {
-            return { state: 'trial_expired', planLabel: 'Trial ended', headline: 'Your 7-day free trial has ended', detail: 'Activate a 6-month plan to continue.', daysLeft: 0, showBanner: true };
+
+        const remainingMs = (start + TRIAL_DAYS * DAY_MS) - nowMillis(now);
+        if (remainingMs <= 0) {
+            return {
+                state: 'trial_expired',
+                planLabel: 'Trial ended',
+                headline: 'Your 7-day free trial has ended',
+                detail: 'Choose a plan to continue.',
+                daysLeft: 0,
+                showBanner: true
+            };
         }
+
+        // Capped at the trial length, so a clock that runs ahead never shows more days than the trial has.
+        const daysLeft = Math.min(TRIAL_DAYS, Math.ceil(remainingMs / DAY_MS));
         const unit = daysLeft === 1 ? 'day' : 'days';
         return {
             state: 'trial_active',
             planLabel: '7-Day Free Trial',
             headline: `Free trial active: ${daysLeft} ${unit} left`,
-            detail: `No card required - $0 charged. The trial ends automatically in ${daysLeft} ${unit}.`,
+            detail: `Your trial ends automatically in ${daysLeft} ${unit}.`,
             daysLeft,
             showBanner: false
         };
