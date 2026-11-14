@@ -1,15 +1,15 @@
-// Single source for pricing display values, the Gumroad product catalog and the landing-page sample snapshot.
+// Single source for the product catalog, sector list, pricing values and the sample snapshot.
 // Loads as a plain <script> in the browser (window.AG_CONFIG) and with require() in Node tests.
 (function (root) {
-    // 6-month Payoneer pricing that index.html currently displays. Changing a price here changes the
-    // displayed amount only; checkout links stay in index.html until the Gumroad migration is decided.
+    // Payoneer 6-month values. These are NOT shown on the page. They are kept for the tests and
+    // for the open pricing decision (6-month passes vs. monthly Gumroad plans).
     const PRICING = {
         growth: { label: 'Growth', price: 399, termMonths: 6, referenceMonthly: 79 },
         // No verified monthly Pro reference exists, so the Pro savings badge stays hidden.
         pro: { label: 'Pro', price: 1290, termMonths: 6, referenceMonthly: null }
     };
 
-    // Illustrative numbers only. Not live metrics; the landing page labels them "Sample data".
+    // Illustrative numbers only. Not live metrics; the page labels them "Sample data".
     const SAMPLE_SNAPSHOT = { asOf: '2026-11-07', scans: 14820, threats: 28, notices: 25 };
 
     // Scans run once per day (scheduler.py). Do not describe them as continuous or 24/7.
@@ -31,6 +31,18 @@
         media: { code: 'M.S', name: 'Media Shield' },
         executive: { code: 'E.S', name: 'Executive Shield' }
     };
+
+    // The four sectors, shown with equal weight in the explorer. Keys match PRODUCTS[].category.
+    const SECTORS = [
+        { key: 'ecommerce', label: 'E-Commerce & Retail Brands',
+          blurb: 'Online sellers, apparel labels and retail catalogs.' },
+        { key: 'creators', label: 'Creator Economy & Media',
+          blurb: 'Creators, course makers and media producers.' },
+        { key: 'digital-assets', label: 'Digital Assets & Creative Professionals',
+          blurb: 'Photographers, software and template makers, and authors.' },
+        { key: 'specialized', label: 'Specialized & VIP Protection',
+          blurb: 'Real estate, Web3 projects and executive impersonation.' }
+    ];
 
     const PRODUCTS = [
         { id: 'ecom-small-b2c', name: 'Small B2C e-commerce stores', category: 'ecommerce',
@@ -95,6 +107,10 @@
           gumroadUrl: gumroad('jrwsha'), confirmed: false }
     ];
 
+    function productsInSector(key) {
+        return PRODUCTS.filter((p) => p.category === key);
+    }
+
     function formatUsd(amount) {
         return '$' + amount.toLocaleString('en-US');
     }
@@ -125,8 +141,8 @@
     }
 
     const api = {
-        PRICING, SAMPLE_SNAPSHOT, SCAN_CADENCE_LABEL, TIERS, SHIELDS, PRODUCTS,
-        formatUsd, referenceTotal, savings, percent, planText
+        PRICING, SAMPLE_SNAPSHOT, SCAN_CADENCE_LABEL, TIERS, SHIELDS, SECTORS, PRODUCTS,
+        productsInSector, formatUsd, referenceTotal, savings, percent, planText
     };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     root.AG_CONFIG = api;

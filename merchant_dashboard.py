@@ -1,8 +1,10 @@
 """AlphaGuard dashboard (Streamlit).
 
-Admins see DMCA notices and per-store scan counts; merchants can register a store
-and protect product images. Set ALPHAGUARD_API_URL to point at a deployed API.
+Auth: Supabase only. The dashboard signs users in through Supabase Auth (customer_auth.py)
+and sends the Supabase access token to the AlphaGuard API, which verifies it with Supabase
+(api/index.py). No passwords or tokens are written to disk.
 
+Env: ALPHAGUARD_API_URL, SUPABASE_URL, SUPABASE_ANON_KEY
 Run: streamlit run merchant_dashboard.py
 """
 
@@ -11,6 +13,15 @@ import os
 import pandas as pd
 import requests
 import streamlit as st
+
+from customer_auth import (
+    SupabaseAuthError,
+    extract_domain,
+    is_admin_user,
+    supabase_get_user,
+    supabase_sign_in,
+    supabase_sign_up,
+)
 
 API_URL = os.getenv("ALPHAGUARD_API_URL", "http://127.0.0.1:8000").rstrip("/")
 DEFAULT_TIMEOUT = (3, 15)
@@ -28,10 +39,7 @@ st.set_page_config(page_title="AlphaGuard Dashboard", page_icon="🛡️", layou
 
 
 def api_request(method: str, path: str, **kwargs) -> requests.Response:
-    """Call the API with the session token.
-
-    A timeout passed by the caller overrides the default instead of conflicting with it.
-    """
+    """Call the API with the Supabase access token. A caller's timeout overrides the default."""
     headers = dict(kwargs.pop("headers", None) or {})
     token = st.session_state.get("token")
     if token:
@@ -41,9 +49,8 @@ def api_request(method: str, path: str, **kwargs) -> requests.Response:
 
 
 def clear_session() -> None:
-    st.session_state.pop("token", None)
-    st.session_state.pop("role", None)
-    st.session_state.pop("protected", None)
+    for key in ("token", "role", "email", "protected"):
+        st.session_state.pop(key, None)
 
 
 def json_or_none(response: requests.Response):
@@ -53,59 +60,47 @@ def json_or_none(response: requests.Response):
         return None
 
 
+def server_message(response: requests.Response, fallback: str) -> str:
+    body = json_or_none(response)
+    detail = body.get("detail") if isinstance(body, dict) else None
+    return detail if isinstance(detail, str) else fallback
+
+
 def expire_if_unauthorized(response: requests.Response) -> None:
     if response.status_code == 401:
         clear_session()
-        st.warning("Your session expired. Please sign in again.")
+        st.warning("Your session has expired. Please sign in again.")
         st.rerun()
 
 
 def sign_in(email: str, password: str) -> str | None:
     """Return an error message, or None on success."""
     try:
-        response = api_request(
-            "POST", "/api/v1/auth/token", json={"email": email, "password": password}
-        )
+        session = supabase_sign_in(email, password)
+        token = session["access_token"]
+        user = supabase_get_user(token)
+    except SupabaseAuthError as exc:
+        return str(exc)
     except requests.RequestException:
-        return f"Could not reach the API at {API_URL}."
-    body = json_or_none(response)
-    if not isinstance(body, dict):
-        return f"Unexpected response from the API (HTTP {response.status_code})."
-    if response.status_code != 200:
-        detail = body.get("detail")
-        return detail if isinstance(detail, str) else "Sign-in failed."
-    if not body.get("access_token"):
-        return "Sign-in failed."
-    st.session_state["token"] = body["access_token"]
-    st.session_state["role"] = body.get("role", "customer")
+        return "Could not reach the sign-in service. Please try again."
+    if user is None:
+        return "Sign-in failed. Please try again."
+    st.session_state["token"] = token
+    st.session_state["role"] = "admin" if is_admin_user(user) else "customer"
+    st.session_state["email"] = user.get("email", "")
     return None
 
 
-def register_store(email: str, password: str, store_name: str, store_url: str) -> str | None:
-    """Return an error message, or None on success."""
+def register_store(email: str, password: str, store_name: str, store_url: str) -> tuple[str | None, bool]:
+    """Return (error, needs_email_confirmation)."""
     try:
-        response = api_request(
-            "POST",
-            "/api/v1/auth/signup",
-            json={
-                "email": email,
-                "password": password,
-                "store_name": store_name,
-                "store_url": store_url,
-            },
-        )
+        domain = extract_domain(store_url)
+        session = supabase_sign_up(email, password, store_name, domain)
+    except SupabaseAuthError as exc:
+        return str(exc), False
     except requests.RequestException:
-        return f"Could not reach the API at {API_URL}."
-    if response.status_code == 200:
-        return None
-    body = json_or_none(response)
-    detail = body.get("detail") if isinstance(body, dict) else None
-    if isinstance(detail, list):
-        return "Please check your details: " + "; ".join(
-            str(item.get("msg", "invalid value")) if isinstance(item, dict) else "invalid value"
-            for item in detail
-        )
-    return detail if isinstance(detail, str) else f"Registration failed (HTTP {response.status_code})."
+        return "Could not reach the sign-in service. Please try again.", False
+    return None, session is None
 
 
 def load_notices() -> list[dict] | None:
@@ -115,8 +110,11 @@ def load_notices() -> list[dict] | None:
         st.error(f"Could not reach the API at {API_URL}.")
         return None
     expire_if_unauthorized(response)
+    if response.status_code == 503:
+        st.info(server_message(response, "Notice storage is not connected yet."))
+        return None
     if response.status_code != 200:
-        st.error(f"Could not load notices (HTTP {response.status_code}).")
+        st.error(server_message(response, f"Could not load notices (HTTP {response.status_code})."))
         return None
     notices = json_or_none(response)
     if not isinstance(notices, list):
@@ -126,7 +124,7 @@ def load_notices() -> list[dict] | None:
 
 
 def notices_to_frame(notices: list[dict]) -> pd.DataFrame:
-    """Build a notice table with every expected column present, even when empty."""
+    """A notice table with every expected column present, even when empty."""
     frame = pd.DataFrame(notices)
     for column in NOTICE_COLUMNS:
         if column not in frame:
@@ -137,10 +135,12 @@ def notices_to_frame(notices: list[dict]) -> pd.DataFrame:
     return frame
 
 
+# ---------- signed-out view
+
 if "token" not in st.session_state:
     st.title("🛡️ AlphaGuard Security Suite - Portal")
-    auth_mode = st.radio("Choose Action", ["Log In", "Register Store"], horizontal=True)
-    if auth_mode == "Log In":
+    auth_mode = st.radio("Choose action", ["Log in", "Register store"], horizontal=True)
+    if auth_mode == "Log in":
         with st.form("login"):
             email = st.text_input("Email address")
             password = st.text_input("Password", type="password")
@@ -153,32 +153,38 @@ if "token" not in st.session_state:
                 st.rerun()
     else:
         with st.form("register"):
-            st.subheader("Register Your E-Commerce Brand")
+            st.subheader("Register your e-commerce brand")
             reg_email = st.text_input("Work email")
             reg_password = st.text_input("Choose password (min. 8 characters)", type="password")
             store_name = st.text_input("Store name")
             store_url = st.text_input("Store website URL (e.g. https://example.com)")
-            registered = st.form_submit_button("Create Account & Activate Protection")
+            registered = st.form_submit_button("Create account")
         if registered:
-            error = register_store(
+            error, needs_confirmation = register_store(
                 reg_email.strip(), reg_password, store_name.strip(), store_url.strip()
             )
             if error:
                 st.error(error)
+            elif needs_confirmation:
+                st.success("Account created. Check your email to confirm your address, then log in.")
             else:
-                st.success("Account created successfully! Switch to Log In to continue.")
+                st.success("Account created. Switch to Log in to continue.")
     st.stop()
+
+# ---------- signed-in view
 
 is_admin = st.session_state.get("role") == "admin"
 
 st.title("🛡️ AlphaGuard Dashboard")
 st.sidebar.header("Navigation")
+if st.session_state.get("email"):
+    st.sidebar.caption(st.session_state["email"])
 pages = (
     ["Overview", "Notice Log", "Store Metrics", "Protect Assets"]
     if is_admin
     else ["Protect Assets"]
 )
-page = st.sidebar.radio("Select View", pages)
+page = st.sidebar.radio("Select view", pages)
 if st.sidebar.button("Refresh"):
     st.rerun()
 if st.sidebar.button("Sign out"):
@@ -186,15 +192,15 @@ if st.sidebar.button("Sign out"):
     st.rerun()
 
 if page == "Protect Assets":
-    st.subheader("📤 Secure Catalog Asset Upload & Watermarking")
+    st.subheader("Catalog asset protection")
     st.markdown(
         "Upload a product image. The API embeds an invisible watermark and "
-        "computes a perceptual hash; download the protected PNG afterwards."
+        "computes a perceptual hash. Download the protected PNG afterwards."
     )
-    uploaded_file = st.file_uploader("Upload Product Image", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("Upload product image", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
-        st.image(uploaded_file, caption="Preview: Selected Product Asset", width=300)
-        if st.button("Protect Asset"):
+        st.image(uploaded_file, caption="Preview: selected product asset", width=300)
+        if st.button("Protect asset"):
             st.session_state.pop("protected", None)
             with st.spinner("Applying watermark and generating fingerprint..."):
                 try:
@@ -221,14 +227,10 @@ if page == "Protect Assets":
                             "perceptual_hash": response.headers.get("X-AlphaGuard-Perceptual-Hash"),
                             "payload_id": response.headers.get("X-AlphaGuard-Payload-Id"),
                         }
+                    elif response.status_code == 404:
+                        st.info("Asset protection is not available on this server yet.")
                     else:
-                        body = json_or_none(response)
-                        detail = body.get("detail") if isinstance(body, dict) else None
-                        st.error(
-                            detail
-                            if isinstance(detail, str)
-                            else f"Protection failed (HTTP {response.status_code})."
-                        )
+                        st.error(server_message(response, f"Protection failed (HTTP {response.status_code})."))
     # Kept in session state so the download button's rerun does not discard the result.
     protected = st.session_state.get("protected")
     if protected and uploaded_file is not None and protected["source"] == uploaded_file.name:
@@ -261,9 +263,9 @@ if page == "Store Metrics":
             st.metric("Store", data.get("store_url", "-"))
             st.metric("Scans performed", data.get("scans_performed", 0))
         elif response.status_code == 404:
-            st.info("No store found with that ID.")
+            st.info("Store metrics are not available on this server yet.")
         else:
-            st.error(f"Could not load metrics (HTTP {response.status_code}).")
+            st.error(server_message(response, f"Could not load metrics (HTTP {response.status_code})."))
     st.stop()
 
 notices = load_notices()
@@ -289,9 +291,12 @@ if page == "Overview":
         st.caption("Showing the 100 most recent notices.")
         st.divider()
         st.subheader("Notices created per day")
-        per_day = frame.dropna(subset=["created_at"]).groupby(
-            frame["created_at"].dt.date
-        ).size().rename("Notices")
+        per_day = (
+            frame.dropna(subset=["created_at"])
+            .groupby(frame["created_at"].dt.date)
+            .size()
+            .rename("Notices")
+        )
         st.bar_chart(per_day)
         st.subheader("Notices by status")
         st.bar_chart(counts)
