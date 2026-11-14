@@ -165,7 +165,7 @@ async function loadNotices() {
 
   const { data, error } = await supabase
     .from('notice_reviews')
-    .select('id, target_url, original_url, score, status, decided_by, decided_at, created_at')
+    .select('id, target_url, original_url, score, status, decided_by, created_at')
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) {
@@ -180,25 +180,30 @@ async function loadNotices() {
 
   data.forEach((notice) => {
     const row = el('tr');
-
     const decision = el('td');
+
     if (notice.status === 'ready') {
       const approve = el('button', { type: 'button', class: 'btn btn-primary' }, 'Approve');
       const reject = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Reject');
       approve.addEventListener('click', () => decideNotice(notice.id, 'approved'));
       reject.addEventListener('click', () => decideNotice(notice.id, 'rejected'));
       decision.append(approve, ' ', reject);
+    } else if (notice.status === 'approved') {
+      const send = el('button', { type: 'button', class: 'btn btn-primary' }, 'Send notice');
+      send.addEventListener('click', () => sendNotice(notice.id));
+      decision.append(send);
     } else {
       decision.textContent = notice.decided_by
         ? `${notice.status} by ${notice.decided_by}`
         : notice.status;
     }
 
+    const scoreText = notice.score == null ? 'manual' : `${Number(notice.score).toFixed(1)}%`;
     row.append(
       el('td', {}, formatTime(notice.created_at)),
       el('td', { class: 'mono' }, notice.target_url),
       el('td', { class: 'mono' }, notice.original_url),
-      el('td', {}, `${Number(notice.score).toFixed(1)}%`),
+      el('td', {}, scoreText),
       el('td', {}, notice.status),
       decision
     );
@@ -225,7 +230,32 @@ async function decideNotice(id, decision) {
     return;
   }
   await audit(`notice:${decision}`, id);
-  setStatus(status, `Notice ${decision}. Sending is not connected yet.`);
+  setStatus(status, `Notice ${decision}.`);
+  await loadNotices();
+}
+
+async function sendNotice(id) {
+  const status = $('notice-status');
+  const confirmed = window.confirm(
+    'Send this takedown notice now? It is sent in the name of AlphaGuard and cannot be recalled. Continue only if the evidence has been reviewed.'
+  );
+  if (!confirmed) return;
+
+  setStatus(status, 'Sending…');
+  try {
+    const session = await getCurrentSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Sign in again to send notices.');
+    const response = await fetch(`/api/v1/admin/notices/${id}/send`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || `Send failed (HTTP ${response.status}).`);
+    setStatus(status, 'Notice sent.');
+  } catch (err) {
+    setStatus(status, err.message || 'Could not send the notice.', true);
+  }
   await loadNotices();
 }
 
