@@ -11,6 +11,7 @@
   POST /api/v1/admin/notices/{id}/contact       admin only: sets the abuse contact for a notice that lacks one
   POST /api/v1/scan/execute-takedown            admin only: saves a manual draft to the queue, never sends
   POST /api/v1/admin/notices/{id}/send          admin only: sends an APPROVED notice, once, with an audit trail
+  GET  /api/health                              public: liveness check (listed again for clarity)
 
 Nothing is sent without an admin's approval. Every decision and send is written to the audit log.
 """
@@ -223,4 +224,532 @@ def inspect_store(domain: str) -> dict:
             count, platform = len(images), None
             note = "Estimated from images on the homepage. The full catalog may be larger."
 
-        if count < 1:
+    if count < 1:
+        return {"valid": False, "message": "No product images were found on this page."}
+    return {
+        "valid": True,
+        "detected_category": platform,
+        "catalog_images_indexed": count,
+        "recommended_tier": _tier_for(count),
+        "inspection_note": note,
+    }
+
+
+@app.post("/api/v1/inspect-domain")
+def inspect_domain(body: InspectRequest):
+    try:
+        domain = normalize_domain(body.url)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        return inspect_store(domain)
+    except ValueError as exc:
+        return {"valid": False, "message": str(exc)}
+    except requests.RequestException:
+        return {"valid": False, "message": f"We could not reach {domain}. Check the URL and try again."}
+
+
+# ---------- sign-up helpers
+
+@app.post("/api/v1/auth/check-availability")
+def check_availability(body: AvailabilityRequest):
+    if body.store_url.strip():
+        try:
+            normalize_domain(body.store_url)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {
+        "status": "success",
+        "available": True,
+        "message": "Duplicate email addresses are rejected at sign-up.",
+    }
+
+
+# ---------- Supabase session checks
+
+def _bearer_token(request: Request) -> str:
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    return token.strip() if scheme.lower() == "bearer" else ""
+
+
+def _supabase_user(token: str) -> dict | None:
+    """Return the Supabase user for a valid access token, else None."""
+    if not token or not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        return None
+    try:
+        response = requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"},
+            timeout=(3, 10),
+        )
+        if response.status_code != 200:
+            return None
+        user = response.json()
+    except (requests.RequestException, ValueError):
+        return None
+    return user if isinstance(user, dict) and user.get("email") else None
+
+
+def _require_admin(request: Request) -> dict:
+    user = _supabase_user(_bearer_token(request))
+    if user is None:
+        raise HTTPException(status_code=401, detail="Sign in again to continue.")
+    role = (user.get("app_metadata") or {}).get("role")
+    if role not in ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return user
+
+
+def _send_mail(to: str, subject: str, html_body: str) -> None:
+    if not RESEND_API_KEY or not MAIL_SENDER:
+        raise RuntimeError("Email is not configured.")
+    resend.api_key = RESEND_API_KEY
+    resend.Emails.send({
+        "from": f"AlphaGuard Security <{MAIL_SENDER}>",
+        "to": [to],
+        "subject": subject,
+        "html": html_body,
+    })
+
+
+# ---------- sign-up welcome and store registration
+
+@app.post("/api/v1/auth/register")
+def register(body: RegisterRequest, request: Request):
+    email = str(body.email).strip().lower()
+    session_user = _supabase_user(_bearer_token(request))
+    verified = str(session_user.get("email", "")).strip().lower() if session_user else ""
+    sent = False
+    # Only the address the caller has proven with a valid session gets a welcome email or a saved store.
+    if session_user and verified == email:
+        try:
+            _send_mail(
+                email,
+                "Welcome to AlphaGuard Security Suite",
+                f"<h2>Welcome {html.escape(body.name)}!</h2>"
+                "<p>Your trial account has been created.</p>",
+            )
+            sent = True
+        except Exception:
+            logger.exception("Welcome email failed")
+        if body.store_url.strip():
+            try:
+                _sb_request(
+                    "POST",
+                    "/rest/v1/stores",
+                    json={"user_id": session_user["id"], "store_url": normalize_domain(body.store_url)},
+                    prefer="return=minimal",
+                )
+            except (ValueError, HTTPException):
+                logger.warning("Store was not saved at sign-up")
+    return {
+        "status": "success",
+        "success": True,
+        "message": "Account recorded.",
+        "email_dispatched": sent,
+        "role": "customer",
+    }
+
+
+# ---------- payments (Gumroad)
+
+@app.post("/api/v1/webhooks/gumroad/{secret}")
+async def gumroad_webhook(secret: str, request: Request):
+    # Gumroad sends form-encoded pings.
+    if not secret_matches(secret):
+        raise HTTPException(status_code=404, detail="Not found.")
+    form = dict((await request.form()).items())
+    try:
+        return process_ping(form)
+    except BillingError as exc:
+        logger.warning("Gumroad ping not applied: %s", exc)
+        # 503 makes Gumroad retry, so a temporary Supabase or Gumroad outage doesn't lose the sale.
+        raise HTTPException(status_code=503, detail="Could not apply the purchase yet.")
+
+
+# ---------- password reset
+
+def _recovery_link(email: str) -> str | None:
+    if not SUPABASE_URL or not SUPABASE_SECRET_KEY:
+        raise RuntimeError("Password reset is not configured.")
+    response = requests.post(
+        f"{SUPABASE_URL}/auth/v1/admin/generate_link",
+        headers={
+            "apikey": SUPABASE_SECRET_KEY,
+            "Authorization": f"Bearer {SUPABASE_SECRET_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={"type": "recovery", "email": email, "redirect_to": RESET_PAGE_URL},
+        timeout=(3, 10),
+    )
+    text = (response.text or "").lower()
+    if response.status_code in (400, 404, 422) and any(p in text for p in UNKNOWN_USER_PHRASES):
+        return None  # unknown address: the caller still gets the generic reply
+    response.raise_for_status()
+    body = response.json()
+    if not isinstance(body, dict):
+        raise RuntimeError("Unexpected response from the auth service.")
+    link = body.get("action_link") or (body.get("properties") or {}).get("action_link")
+    if not isinstance(link, str) or not link:
+        raise RuntimeError("No recovery link returned.")
+    return link
+
+
+@app.post("/api/send-reset")
+def send_reset(body: ResetRequest):
+    email = str(body.email).strip().lower()
+    try:
+        link = _recovery_link(email)
+        if link is None:
+            return GENERIC_RESET
+        _send_mail(
+            email,
+            "Reset your AlphaGuard password",
+            "<p>We received a request to reset your password.</p>"
+            f'<p><a href="{html.escape(link, quote=True)}">Reset your password</a></p>'
+            "<p>If you did not request this, you can ignore this email.</p>",
+        )
+        return GENERIC_RESET
+    except Exception:
+        logger.exception("send-reset failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Could not send a password reset email. Please try again later.",
+        )
+
+
+# ---------- database access (Supabase REST, server side only; the secret key never reaches the browser)
+
+def _sb_request(method: str, path: str, *, json=None, params=None, prefer: str | None = None):
+    if not SUPABASE_URL or not SUPABASE_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Database is not configured.")
+    headers = {
+        "apikey": SUPABASE_SECRET_KEY,
+        "Authorization": f"Bearer {SUPABASE_SECRET_KEY}",
+        "Content-Type": "application/json",
+    }
+    if prefer:
+        headers["Prefer"] = prefer
+    try:
+        response = requests.request(
+            method,
+            f"{SUPABASE_URL}{path}",
+            headers=headers,
+            json=json,
+            params=params,
+            timeout=(3, 10),
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=503, detail="Database is unreachable.") from exc
+    if response.status_code >= 400:
+        logger.error("Database %s %s returned HTTP %s", method, path, response.status_code)
+        raise HTTPException(status_code=502, detail="Database request failed.")
+    return response.json() if response.content else None
+
+
+def _audit(actor: str, action: str, target_id: str) -> None:
+    _sb_request(
+        "POST",
+        "/rest/v1/admin_audit_log",
+        json={"actor": actor or "unknown", "action": action, "target_id": str(target_id)},
+        prefer="return=minimal",
+    )
+
+
+def _set_notice_status(notice_id: str, status: str, extra: dict | None = None) -> None:
+    _sb_request(
+        "PATCH",
+        "/rest/v1/notice_reviews",
+        params={"id": f"eq.{notice_id}"},
+        json={"status": status, **(extra or {})},
+        prefer="return=minimal",
+    )
+
+
+@app.get("/api/v1/admin/notices")
+def admin_notices(request: Request):
+    _require_admin(request)
+    rows = _sb_request(
+        "GET",
+        "/rest/v1/notice_reviews",
+        params={
+            "select": "id,target_url,original_url,score,status,decided_by,created_at,sent_at",
+            "order": "created_at.desc",
+            "limit": "100",
+        },
+    )
+    return rows or []
+
+
+# ---------- automated scan (Vercel Cron, daily). It only queues matches for review.
+
+def _product_image_urls(store_url: str) -> list[str]:
+    domain = normalize_domain(store_url)
+    with public_only_session() as session:
+        status, ctype, text = _get_text(session, f"https://{domain}/products.json?limit=50", domain)
+    if status != 200 or "json" not in ctype:
+        return []
+    try:
+        products = json.loads(text).get("products") or []
+    except (ValueError, AttributeError):
+        return []
+    urls = []
+    for product in products:
+        images = product.get("images") or []
+        src = images[0].get("src") if images and isinstance(images[0], dict) else None
+        if src:
+            urls.append("https:" + src if src.startswith("//") else src)
+    return urls[:MAX_IMAGES_PER_STORE]
+
+
+def _match_row(store: dict, original: str, target: str, similarity: float, host: str) -> dict:
+    base = {
+        "target_url": target,
+        "original_url": original,
+        "score": round(similarity, 2),
+        "store_id": store["id"],
+        "decided_by": None,
+    }
+    try:
+        contact = lookup_whois_contact(host)
+    except Exception:
+        contact = None
+    if not contact:
+        return {**base, "status": "needs_contact", "recipient": None,
+                "sender": LEGAL_SENDER or None, "subject": None, "body_html": None}
+    draft = create_dmca_notice_draft(
+        host_abuse_email=contact,
+        target_infringing_url=target,
+        original_asset_url=original,
+        sender_email=LEGAL_SENDER or None,
+        store_domain=normalize_domain(store["store_url"]),
+        recipient_source="whois",
+    )
+    return {**base, "status": "ready", "recipient": draft["recipient"], "sender": draft["sender"],
+            "subject": draft["subject"], "body_html": draft["html"]}
+
+
+def run_scan_cycle() -> dict:
+    if not SERPAPI_KEY:
+        return {"status": "skipped", "reason": "SERPAPI_KEY is not set"}
+    started = time.monotonic()
+
+    def out_of_time() -> bool:
+        return time.monotonic() - started > SCAN_BUDGET_SECONDS
+
+    summary = {"stores": 0, "images": 0, "matches_saved": 0, "needs_contact": 0, "errors": 0}
+    stores = _sb_request(
+        "GET",
+        "/rest/v1/stores",
+        params={
+            "active": "eq.true",
+            "select": "id,store_url",
+            "order": "last_scanned_at.asc.nullsfirst",
+            "limit": str(MAX_STORES_PER_RUN),
+        },
+    ) or []
+
+    for store in stores:
+        if out_of_time() or summary["images"] >= MAX_IMAGES_PER_RUN:
+            break
+        summary["stores"] += 1
+        try:
+            own_host = normalize_domain(store["store_url"])
+            originals = _product_image_urls(store["store_url"])
+        except Exception:
+            summary["errors"] += 1
+            continue
+
+        for original in originals:
+            if out_of_time() or summary["images"] >= MAX_IMAGES_PER_RUN:
+                break
+            summary["images"] += 1
+            try:
+                original_hash = compute_image_hash(original)
+                matches = search_web_for_matches(original, SERPAPI_KEY, max_results=10)
+            except (ValueError, RuntimeError, OSError, requests.RequestException):
+                summary["errors"] += 1
+                continue
+
+            for match in matches:
+                if out_of_time():
+                    break
+                host = urlsplit(match["url"]).hostname or ""
+                if not host or host == own_host or host.endswith("." + own_host):
+                    continue
+                # Compare pictures, not pages: the scanner returns the match's image link as well.
+                image_url = match.get("image")
+                if not image_url:
+                    continue
+                try:
+                    similarity = compare_hashes(original_hash, compute_image_hash(image_url))
+                except Exception:
+                    continue
+                if similarity < MATCH_THRESHOLD:
+                    continue
+                try:
+                    row = _match_row(store, original, match["url"], similarity, host)
+                    _sb_request(
+                        "POST",
+                        "/rest/v1/notice_reviews",
+                        params={"on_conflict": "target_url,original_url"},
+                        json=row,
+                        prefer="resolution=ignore-duplicates,return=minimal",
+                    )
+                except Exception:
+                    summary["errors"] += 1
+                    continue
+                summary["matches_saved"] += 1
+                if row["status"] == "needs_contact":
+                    summary["needs_contact"] += 1
+
+        try:
+            _sb_request(
+                "PATCH",
+                "/rest/v1/stores",
+                params={"id": f"eq.{store['id']}"},
+                json={"last_scanned_at": datetime.now(timezone.utc).isoformat()},
+                prefer="return=minimal",
+            )
+        except Exception:
+            summary["errors"] += 1
+
+    try:
+        _audit("cron", "scan_run", f"stores={summary['stores']} matches={summary['matches_saved']}")
+    except Exception:
+        logger.exception("Could not write the scan audit entry")
+    return {"status": "ok", **summary}
+
+
+@app.get("/api/v1/cron/scan")
+def cron_scan(request: Request):
+    # Vercel Cron sends "Authorization: Bearer <CRON_SECRET>". Anyone else gets 401.
+    supplied = request.headers.get("authorization", "").encode()
+    expected = f"Bearer {CRON_SECRET}".encode()
+    if not CRON_SECRET or not hmac.compare_digest(supplied, expected):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return run_scan_cycle()
+
+
+@app.post("/api/v1/admin/notices/{notice_id}/contact")
+def set_contact(notice_id: str, body: ContactRequest, request: Request):
+    admin = _require_admin(request)
+    if not UUID_PATTERN.fullmatch(notice_id):
+        raise HTTPException(status_code=422, detail="Invalid notice id.")
+    rows = _sb_request(
+        "GET",
+        "/rest/v1/notice_reviews",
+        params={"id": f"eq.{notice_id}", "select": "target_url,original_url,status"},
+    )
+    if not rows or rows[0]["status"] != "needs_contact":
+        raise HTTPException(status_code=409, detail="This notice does not need a contact.")
+    draft = create_dmca_notice_draft(
+        host_abuse_email=str(body.email),
+        target_infringing_url=rows[0]["target_url"],
+        original_asset_url=rows[0]["original_url"],
+        sender_email=LEGAL_SENDER or None,
+        recipient_source="provided",
+    )
+    _sb_request(
+        "PATCH",
+        "/rest/v1/notice_reviews",
+        params={"id": f"eq.{notice_id}", "status": "eq.needs_contact"},
+        json={"status": "ready", "recipient": draft["recipient"], "sender": draft["sender"],
+              "subject": draft["subject"], "body_html": draft["html"]},
+        prefer="return=minimal",
+    )
+    _audit(admin.get("email") or "unknown", "contact_set", notice_id)
+    return {"status": "ready"}
+
+
+# ---------- manual drafting (saves to the review queue; never sends)
+
+@app.post("/api/v1/scan/execute-takedown")
+def execute_takedown(body: TakedownRequest, request: Request):
+    admin = _require_admin(request)
+    actor = admin.get("email") or "unknown"
+    try:
+        draft = create_dmca_notice_draft(
+            host_abuse_email=str(body.host_abuse_email),
+            target_infringing_url=body.target_infringing_url,
+            original_asset_url=body.original_image_url,
+            sender_email=LEGAL_SENDER or None,
+            recipient_source="provided",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    _sb_request(
+        "POST",
+        "/rest/v1/notice_reviews",
+        json={
+            "target_url": body.target_infringing_url,
+            "original_url": body.original_image_url,
+            "status": "ready",
+            "recipient": draft["recipient"],
+            "sender": draft["sender"],
+            "subject": draft["subject"],
+            "body_html": draft["html"],
+        },
+        prefer="return=minimal",
+    )
+    _audit(actor, "draft_created", body.target_infringing_url)
+    return {
+        "message": "Draft saved to the review queue. It has not been sent.",
+        "disclaimer": DISCLAIMER,
+    }
+
+
+# ---------- sending (only for approved notices, once, with an audit trail)
+
+@app.post("/api/v1/admin/notices/{notice_id}/send")
+def send_notice(notice_id: str, request: Request):
+    admin = _require_admin(request)
+    actor = admin.get("email") or "unknown"
+    if not UUID_PATTERN.fullmatch(notice_id):
+        raise HTTPException(status_code=422, detail="Invalid notice id.")
+    if not RESEND_API_KEY or not LEGAL_SENDER:
+        raise HTTPException(status_code=503, detail="Email sending is not configured.")
+
+    # Atomic claim: only an APPROVED notice can move to 'sending', so a double click cannot send twice.
+    claimed = _sb_request(
+        "PATCH",
+        "/rest/v1/notice_reviews",
+        params={"id": f"eq.{notice_id}", "status": "eq.approved"},
+        json={"status": "sending"},
+        prefer="return=representation",
+    )
+    if not claimed:
+        raise HTTPException(status_code=409, detail="This notice is not approved, or it was already sent.")
+    notice = claimed[0]
+
+    _audit(actor, "send_authorized", notice_id)
+
+    try:
+        message_id = send_dmca_notice(
+            api_key=RESEND_API_KEY,
+            sender_email=LEGAL_SENDER,
+            recipient=notice["recipient"],
+            subject=notice["subject"],
+            html=notice["body_html"],
+        )
+    except DmcaProviderRejectedError as exc:
+        _set_notice_status(notice_id, "send_failed")
+        _audit(actor, "send_failed", notice_id)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except DmcaDeliveryUnknownError as exc:
+        _set_notice_status(notice_id, "send_unknown")
+        _audit(actor, "send_unknown", notice_id)
+        raise HTTPException(
+            status_code=502,
+            detail="The email provider did not confirm the result. Check its logs before doing anything else.",
+        ) from exc
+
+    _set_notice_status(notice_id, "sent", {"sent_at": datetime.now(timezone.utc).isoformat()})
+    _audit(actor, "sent", notice_id)
+    return {"success": True, "notice_id": notice_id, "status": "sent", "provider_message_id": message_id}
+
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
