@@ -223,4 +223,4 @@ def inspect_store(domain: str) -> dict:
             count, platform = len(images), None
             note = "Estimated from images on the homepage. The full catalog may be larger."
 
-    if count
+        if count < 1:
