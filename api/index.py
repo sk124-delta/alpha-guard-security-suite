@@ -1,20 +1,21 @@
 """AlphaGuard API: the Vercel serverless entry point.
 
-vercel.json sends every /api/* request here. Routes:
-
-  GET  /api/health                              public: liveness check, no secrets
+  GET  /api/health                              public: liveness check
   POST /api/v1/inspect-domain                   public: free-trial store check (read-only, SSRF-protected)
   POST /api/v1/auth/check-availability          public: input check before sign-up
-  POST /api/v1/auth/register                    public: welcome email, only to a verified session email
+  POST /api/v1/auth/register                    public: welcome email, saves the store for a verified session
   POST /api/v1/webhooks/gumroad/{secret}        Gumroad purchase pings (verified with Gumroad)
   POST /api/send-reset                          public: password reset email (same reply for any address)
+  GET  /api/v1/cron/scan                        Vercel Cron only: scans stores, queues matches, never sends
   GET  /api/v1/admin/notices                    admin only: notice review queue
-  POST /api/v1/scan/execute-takedown            admin only: saves a draft to the review queue, never sends
+  POST /api/v1/admin/notices/{id}/contact       admin only: sets the abuse contact for a notice that lacks one
+  POST /api/v1/scan/execute-takedown            admin only: saves a manual draft to the queue, never sends
   POST /api/v1/admin/notices/{id}/send          admin only: sends an APPROVED notice, once, with an audit trail
 
-Sending is only possible for a notice an admin has approved, and each send is recorded.
+Nothing is sent without an admin's approval. Every decision and send is written to the audit log.
 """
 
+import hmac
 import html
 import ipaddress
 import json
@@ -22,6 +23,7 @@ import logging
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -41,9 +43,16 @@ from dmca_dispatcher import (  # noqa: E402
     DmcaDeliveryUnknownError,
     DmcaProviderRejectedError,
     create_dmca_notice_draft,
+    lookup_whois_contact,
     send_dmca_notice,
 )
-from scanner import _validate_public_url, public_only_session  # noqa: E402
+from scanner import (  # noqa: E402
+    _validate_public_url,
+    compare_hashes,
+    compute_image_hash,
+    public_only_session,
+    search_web_for_matches,
+)
 
 logger = logging.getLogger("alphaguard.api")
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -59,6 +68,8 @@ LEGAL_SENDER = (os.environ.get("SENDER_LEGAL_EMAIL") or "").strip()
 RESET_PAGE_URL = os.environ.get(
     "PASSWORD_RESET_REDIRECT_URL", "https://www.alphaguardsuite.com/update-password"
 ).strip()
+CRON_SECRET = os.environ.get("CRON_SECRET", "").strip()
+SERPAPI_KEY = os.environ.get("SERPAPI_KEY", "").strip()
 
 ADMIN_ROLES = {"admin", "legal"}
 MAX_BODY_BYTES = 4_000_000
@@ -67,6 +78,13 @@ DISCLAIMER = "Similarity is not a legal determination. Review all evidence befor
 # TODO: align these bands with the confirmed prices in src/site-config.js before launch.
 TIER_BANDS = ((500, "Growth Tier"), (2000, "Pro Tier"))
 ENTERPRISE_TIER = "Enterprise Tier"
+
+# Scan limits. These cap SerpApi spend and keep each cron run inside the 60-second function limit.
+MATCH_THRESHOLD = 90.0
+MAX_STORES_PER_RUN = 5
+MAX_IMAGES_PER_STORE = 3
+MAX_IMAGES_PER_RUN = 15
+SCAN_BUDGET_SECONDS = 40
 
 IMAGE_SRC = re.compile(r"""<img\b[^>]*?\bsrc=["']([^"']+)["']""", re.IGNORECASE)
 IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp")
@@ -96,6 +114,10 @@ class RegisterRequest(BaseModel):
 
 
 class ResetRequest(BaseModel):
+    email: EmailStr
+
+
+class ContactRequest(BaseModel):
     email: EmailStr
 
 
@@ -201,342 +223,4 @@ def inspect_store(domain: str) -> dict:
             count, platform = len(images), None
             note = "Estimated from images on the homepage. The full catalog may be larger."
 
-    if count < 1:
-        return {"valid": False, "message": "No product images were found on this page."}
-    return {
-        "valid": True,
-        "detected_category": platform,
-        "catalog_images_indexed": count,
-        "recommended_tier": _tier_for(count),
-        "inspection_note": note,
-    }
-
-
-@app.post("/api/v1/inspect-domain")
-def inspect_domain(body: InspectRequest):
-    try:
-        domain = normalize_domain(body.url)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    try:
-        return inspect_store(domain)
-    except ValueError as exc:
-        return {"valid": False, "message": str(exc)}
-    except requests.RequestException:
-        return {"valid": False, "message": f"We could not reach {domain}. Check the URL and try again."}
-
-
-# ---------- sign-up helpers
-
-@app.post("/api/v1/auth/check-availability")
-def check_availability(body: AvailabilityRequest):
-    if body.store_url.strip():
-        try:
-            normalize_domain(body.store_url)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return {
-        "status": "success",
-        "available": True,
-        "message": "Duplicate email addresses are rejected at sign-up.",
-    }
-
-
-# ---------- Supabase session checks
-
-def _bearer_token(request: Request) -> str:
-    scheme, _, token = request.headers.get("authorization", "").partition(" ")
-    return token.strip() if scheme.lower() == "bearer" else ""
-
-
-def _supabase_user(token: str) -> dict | None:
-    """Return the Supabase user for a valid access token, else None."""
-    if not token or not SUPABASE_URL or not SUPABASE_ANON_KEY:
-        return None
-    try:
-        response = requests.get(
-            f"{SUPABASE_URL}/auth/v1/user",
-            headers={"apikey": SUPABASE_ANON_KEY, "Authorization": f"Bearer {token}"},
-            timeout=(3, 10),
-        )
-        if response.status_code != 200:
-            return None
-        user = response.json()
-    except (requests.RequestException, ValueError):
-        return None
-    return user if isinstance(user, dict) and user.get("email") else None
-
-
-def _require_admin(request: Request) -> dict:
-    user = _supabase_user(_bearer_token(request))
-    if user is None:
-        raise HTTPException(status_code=401, detail="Sign in again to continue.")
-    role = (user.get("app_metadata") or {}).get("role")
-    if role not in ADMIN_ROLES:
-        raise HTTPException(status_code=403, detail="Admin access required.")
-    return user
-
-
-def _send_mail(to: str, subject: str, html_body: str) -> None:
-    if not RESEND_API_KEY or not MAIL_SENDER:
-        raise RuntimeError("Email is not configured.")
-    resend.api_key = RESEND_API_KEY
-    resend.Emails.send({
-        "from": f"AlphaGuard Security <{MAIL_SENDER}>",
-        "to": [to],
-        "subject": subject,
-        "html": html_body,
-    })
-
-
-# ---------- sign-up welcome
-
-@app.post("/api/v1/auth/register")
-def register(body: RegisterRequest, request: Request):
-    email = str(body.email).strip().lower()
-    session_user = _supabase_user(_bearer_token(request))
-    verified = str(session_user.get("email", "")).strip().lower() if session_user else ""
-    sent = False
-    # Only the address the caller has proven with a valid session gets a welcome email.
-    if session_user and verified == email:
-        try:
-            _send_mail(
-                email,
-                "Welcome to AlphaGuard Security Suite",
-                f"<h2>Welcome {html.escape(body.name)}!</h2>"
-                "<p>Your trial account has been created.</p>",
-            )
-            sent = True
-        except Exception:
-            logger.exception("Welcome email failed")
-    return {
-        "status": "success",
-        "success": True,
-        "message": "Account recorded.",
-        "email_dispatched": sent,
-        "role": "customer",
-    }
-
-
-# ---------- payments (Gumroad)
-
-@app.post("/api/v1/webhooks/gumroad/{secret}")
-async def gumroad_webhook(secret: str, request: Request):
-    # Gumroad sends form-encoded pings.
-    if not secret_matches(secret):
-        raise HTTPException(status_code=404, detail="Not found.")
-    form = dict((await request.form()).items())
-    try:
-        return process_ping(form)
-    except BillingError as exc:
-        logger.warning("Gumroad ping not applied: %s", exc)
-        # 503 makes Gumroad retry, so a temporary Supabase or Gumroad outage doesn't lose the sale.
-        raise HTTPException(status_code=503, detail="Could not apply the purchase yet.")
-
-
-# ---------- password reset
-
-def _recovery_link(email: str) -> str | None:
-    if not SUPABASE_URL or not SUPABASE_SECRET_KEY:
-        raise RuntimeError("Password reset is not configured.")
-    response = requests.post(
-        f"{SUPABASE_URL}/auth/v1/admin/generate_link",
-        headers={
-            "apikey": SUPABASE_SECRET_KEY,
-            "Authorization": f"Bearer {SUPABASE_SECRET_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={"type": "recovery", "email": email, "redirect_to": RESET_PAGE_URL},
-        timeout=(3, 10),
-    )
-    text = (response.text or "").lower()
-    if response.status_code in (400, 404, 422) and any(p in text for p in UNKNOWN_USER_PHRASES):
-        return None  # unknown address: the caller still gets the generic reply
-    response.raise_for_status()
-    body = response.json()
-    if not isinstance(body, dict):
-        raise RuntimeError("Unexpected response from the auth service.")
-    link = body.get("action_link") or (body.get("properties") or {}).get("action_link")
-    if not isinstance(link, str) or not link:
-        raise RuntimeError("No recovery link returned.")
-    return link
-
-
-@app.post("/api/send-reset")
-def send_reset(body: ResetRequest):
-    email = str(body.email).strip().lower()
-    try:
-        link = _recovery_link(email)
-        if link is None:
-            return GENERIC_RESET
-        _send_mail(
-            email,
-            "Reset your AlphaGuard password",
-            "<p>We received a request to reset your password.</p>"
-            f'<p><a href="{html.escape(link, quote=True)}">Reset your password</a></p>'
-            "<p>If you did not request this, you can ignore this email.</p>",
-        )
-        return GENERIC_RESET
-    except Exception:
-        logger.exception("send-reset failed")
-        raise HTTPException(
-            status_code=503,
-            detail="Could not send a password reset email. Please try again later.",
-        )
-
-
-# ---------- notice storage (Supabase, server side only)
-
-def _sb_request(method: str, path: str, *, json=None, params=None, prefer: str | None = None):
-    """Call the Supabase REST API with the secret key. The key never leaves the server."""
-    if not SUPABASE_URL or not SUPABASE_SECRET_KEY:
-        raise HTTPException(status_code=503, detail="Database is not configured.")
-    headers = {
-        "apikey": SUPABASE_SECRET_KEY,
-        "Authorization": f"Bearer {SUPABASE_SECRET_KEY}",
-        "Content-Type": "application/json",
-    }
-    if prefer:
-        headers["Prefer"] = prefer
-    try:
-        response = requests.request(
-            method,
-            f"{SUPABASE_URL}{path}",
-            headers=headers,
-            json=json,
-            params=params,
-            timeout=(3, 10),
-        )
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=503, detail="Database is unreachable.") from exc
-    if response.status_code >= 400:
-        logger.error("Database %s %s returned HTTP %s", method, path, response.status_code)
-        raise HTTPException(status_code=502, detail="Database request failed.")
-    return response.json() if response.content else None
-
-
-def _audit(actor: str, action: str, target_id: str) -> None:
-    _sb_request(
-        "POST",
-        "/rest/v1/admin_audit_log",
-        json={"actor": actor or "unknown", "action": action, "target_id": str(target_id)},
-        prefer="return=minimal",
-    )
-
-
-def _set_notice_status(notice_id: str, status: str, extra: dict | None = None) -> None:
-    _sb_request(
-        "PATCH",
-        "/rest/v1/notice_reviews",
-        params={"id": f"eq.{notice_id}"},
-        json={"status": status, **(extra or {})},
-        prefer="return=minimal",
-    )
-
-
-@app.get("/api/v1/admin/notices")
-def admin_notices(request: Request):
-    _require_admin(request)
-    rows = _sb_request(
-        "GET",
-        "/rest/v1/notice_reviews",
-        params={
-            "select": "id,target_url,original_url,score,status,decided_by,created_at,sent_at",
-            "order": "created_at.desc",
-            "limit": "100",
-        },
-    )
-    return rows or []
-
-
-# ---------- drafting (saves to the review queue; never sends)
-
-@app.post("/api/v1/scan/execute-takedown")
-def execute_takedown(body: TakedownRequest, request: Request):
-    admin = _require_admin(request)
-    actor = admin.get("email") or "unknown"
-    try:
-        draft = create_dmca_notice_draft(
-            host_abuse_email=str(body.host_abuse_email),
-            target_infringing_url=body.target_infringing_url,
-            original_asset_url=body.original_image_url,
-            sender_email=LEGAL_SENDER or None,
-            recipient_source="provided",
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-    _sb_request(
-        "POST",
-        "/rest/v1/notice_reviews",
-        json={
-            "target_url": body.target_infringing_url,
-            "original_url": body.original_image_url,
-            "status": "ready",
-            "recipient": draft["recipient"],
-            "sender": draft["sender"],
-            "subject": draft["subject"],
-            "body_html": draft["html"],
-        },
-        prefer="return=minimal",
-    )
-    _audit(actor, "draft_created", body.target_infringing_url)
-    return {
-        "message": "Draft saved to the review queue. It has not been sent.",
-        "disclaimer": DISCLAIMER,
-    }
-
-
-# ---------- sending (only for approved notices, once, with an audit trail)
-
-@app.post("/api/v1/admin/notices/{notice_id}/send")
-def send_notice(notice_id: str, request: Request):
-    admin = _require_admin(request)
-    actor = admin.get("email") or "unknown"
-    if not UUID_PATTERN.fullmatch(notice_id):
-        raise HTTPException(status_code=422, detail="Invalid notice id.")
-    if not RESEND_API_KEY or not LEGAL_SENDER:
-        raise HTTPException(status_code=503, detail="Email sending is not configured.")
-
-    # Atomic claim: only an APPROVED notice can move to 'sending', so a double click cannot send twice.
-    claimed = _sb_request(
-        "PATCH",
-        "/rest/v1/notice_reviews",
-        params={"id": f"eq.{notice_id}", "status": "eq.approved"},
-        json={"status": "sending"},
-        prefer="return=representation",
-    )
-    if not claimed:
-        raise HTTPException(status_code=409, detail="This notice is not approved, or it was already sent.")
-    notice = claimed[0]
-
-    _audit(actor, "send_authorized", notice_id)
-
-    try:
-        message_id = send_dmca_notice(
-            api_key=RESEND_API_KEY,
-            sender_email=LEGAL_SENDER,
-            recipient=notice["recipient"],
-            subject=notice["subject"],
-            html=notice["body_html"],
-        )
-    except DmcaProviderRejectedError as exc:
-        _set_notice_status(notice_id, "send_failed")
-        _audit(actor, "send_failed", notice_id)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    except DmcaDeliveryUnknownError as exc:
-        _set_notice_status(notice_id, "send_unknown")
-        _audit(actor, "send_unknown", notice_id)
-        raise HTTPException(
-            status_code=502,
-            detail="The email provider did not confirm the result. Check its logs before doing anything else.",
-        ) from exc
-
-    _set_notice_status(notice_id, "sent", {"sent_at": datetime.now(timezone.utc).isoformat()})
-    _audit(actor, "sent", notice_id)
-    return {"success": True, "notice_id": notice_id, "status": "sent", "provider_message_id": message_id}
-
-
-@app.get("/api/health")
-def health():
-    return {"status": "ok"}
+    if count

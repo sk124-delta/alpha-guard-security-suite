@@ -27,6 +27,18 @@ function formatTime(value) {
   return new Date(value).toLocaleString();
 }
 
+// Only http and https links are shown as clickable, so a stored value can never run as script.
+function safeLink(url, label) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (e) {
+    return document.createTextNode(url || '');
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) return document.createTextNode(url || '');
+  return el('a', { href: parsed.href, target: '_blank', rel: 'noopener noreferrer' }, label);
+}
+
 function isAdmin(user) {
   return ADMIN_ROLES.includes(user?.app_metadata?.role);
 }
@@ -163,9 +175,11 @@ async function loadNotices() {
   body.replaceChildren();
   setStatus(status, 'Loading…');
 
+  // Highest match first, so the strongest cases are reviewed first.
   const { data, error } = await supabase
     .from('notice_reviews')
     .select('id, target_url, original_url, score, status, decided_by, created_at')
+    .order('score', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) {
@@ -173,10 +187,10 @@ async function loadNotices() {
     return;
   }
   if (!data.length) {
-    setStatus(status, 'No notices waiting for review.');
+    setStatus(status, 'Nothing waiting for review.');
     return;
   }
-  setStatus(status, `${data.length} notice(s).`);
+  setStatus(status, `${data.length} notice(s), highest match first.`);
 
   data.forEach((notice) => {
     const row = el('tr');
@@ -188,6 +202,11 @@ async function loadNotices() {
       approve.addEventListener('click', () => decideNotice(notice.id, 'approved'));
       reject.addEventListener('click', () => decideNotice(notice.id, 'rejected'));
       decision.append(approve, ' ', reject);
+    } else if (notice.status === 'needs_contact') {
+      const input = el('input', { type: 'email', placeholder: 'abuse@host.com', 'aria-label': 'Abuse contact email' });
+      const save = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Save contact');
+      save.addEventListener('click', () => saveContact(notice.id, input.value.trim()));
+      decision.append(input, ' ', save);
     } else if (notice.status === 'approved') {
       const send = el('button', { type: 'button', class: 'btn btn-primary' }, 'Send notice');
       send.addEventListener('click', () => sendNotice(notice.id));
@@ -198,17 +217,45 @@ async function loadNotices() {
         : notice.status;
     }
 
+    const links = el('td');
+    links.append(
+      safeLink(notice.target_url, 'Copy page'),
+      ' · ',
+      safeLink(notice.original_url, 'Original image')
+    );
+
     const scoreText = notice.score == null ? 'manual' : `${Number(notice.score).toFixed(1)}%`;
     row.append(
       el('td', {}, formatTime(notice.created_at)),
-      el('td', { class: 'mono' }, notice.target_url),
-      el('td', { class: 'mono' }, notice.original_url),
+      links,
       el('td', {}, scoreText),
       el('td', {}, notice.status),
       decision
     );
     body.appendChild(row);
   });
+}
+
+async function saveContact(id, email) {
+  const status = $('notice-status');
+  if (!email) {
+    setStatus(status, 'Enter the abuse contact email first.', true);
+    return;
+  }
+  try {
+    const session = await getCurrentSession();
+    const response = await fetch(`/api/v1/admin/notices/${id}/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ email }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Could not save the contact.');
+    setStatus(status, 'Contact saved. Review the page, then approve the notice.');
+  } catch (err) {
+    setStatus(status, err.message, true);
+  }
+  await loadNotices();
 }
 
 async function decideNotice(id, decision) {

@@ -1,10 +1,14 @@
+"""Image comparison helpers for AlphaGuard.
+
+Used by api/index.py. Everything here is SSRF-protected: each outbound request is
+checked against public IP addresses only, and redirects are never followed for images.
+"""
+
 from io import BytesIO
 import ipaddress
-import json
 import logging
 import os
 import socket
-import time
 from urllib.parse import urlsplit
 import warnings
 
@@ -21,10 +25,6 @@ MAX_IMAGE_BYTES = 10 * 1024 * 1024
 REQUEST_TIMEOUT = (3, 10)
 SERPAPI_ENDPOINT = "https://serpapi.com/search"
 SERPAPI_TIMEOUT = (5, 30)
-MAX_IMAGES_PER_STORE = 5
-MATCH_THRESHOLD = 90.0
-# Stop starting new stores once a scan run has taken this long (serverless-safe budget).
-MAX_SCAN_SECONDS = 240
 
 logger = logging.getLogger("alphaguard.scanner")
 
@@ -147,9 +147,11 @@ def compute_image_hash(image_url: str) -> str:
 def search_web_for_matches(image_url: str, api_key: str | None = None, max_results: int = 20) -> list[dict]:
     """Reverse-image search (SerpApi Google Lens) for copies of a public image URL.
 
-    The key comes from the SERPAPI_KEY environment variable unless passed explicitly;
-    never hardcode it. Returns [{"title", "url", "source"}], skipping entries without a link.
-    Raises ValueError for bad input/config and RuntimeError for API or network failures.
+    Returns [{"title", "url", "image", "source"}]. "url" is the page where the copy appears;
+    "image" is the copy's picture link, which is what the hash comparison needs.
+    Entries without a usable page link are skipped. The key comes from the argument or from
+    SERPAPI_KEY, and is never echoed into an error message.
+    Raises ValueError for bad input or configuration, RuntimeError for API or network failures.
     """
     _validate_public_url(image_url)
     key = api_key or os.environ.get("SERPAPI_KEY")
@@ -175,118 +177,27 @@ def search_web_for_matches(image_url: str, api_key: str | None = None, max_resul
     except ValueError as exc:
         raise RuntimeError("Reverse image search returned invalid JSON.") from exc
     if data.get("error"):
-        raise RuntimeError(f"Reverse image search error: {data['error']}")
+        raise RuntimeError("Reverse image search returned an error.")
 
     matches = []
     for match in data.get("visual_matches") or []:
+        if not isinstance(match, dict):
+            continue
         link = match.get("link")
         if not link or urlsplit(link).scheme not in {"http", "https"}:
             continue
-        matches.append({"title": match.get("title") or "", "url": link, "source": match.get("source") or ""})
+        image = match.get("image") or match.get("thumbnail") or ""
+        if image and urlsplit(image).scheme not in {"http", "https"}:
+            image = ""
+        matches.append({
+            "title": match.get("title") or "",
+            "url": link,
+            "image": image,
+            "source": match.get("source") or "",
+        })
         if len(matches) >= max_results:
             break
     return matches
-
-
-def run_scheduled_scans(session_factory, store_model, notice_model, fetch_page, draft_notice, find_contact) -> dict:
-    """Scan every connected store's public Shopify catalog and queue PENDING DMCA drafts.
-
-    Dependencies are injected by main.py to avoid a circular import. Notices are never dispatched here.
-    Stops starting new stores after MAX_SCAN_SECONDS and reports how many were skipped.
-    """
-    summary = {"stores": 0, "images": 0, "notices": 0, "errors": 0, "skipped_stores": 0}
-    started = time.monotonic()
-    db = session_factory()
-    try:
-        stores = db.query(store_model).all()
-        for index, store in enumerate(stores):
-            if time.monotonic() - started > MAX_SCAN_SECONDS:
-                summary["skipped_stores"] = len(stores) - index
-                logger.warning(
-                    "Scan time limit of %s seconds reached; skipped %s store(s).",
-                    MAX_SCAN_SECONDS,
-                    summary["skipped_stores"],
-                )
-                break
-
-            summary["stores"] += 1
-            try:
-                if not store.store_url:
-                    summary["errors"] += 1
-                    logger.warning("Skipped store %s: no store URL is set.", store.id)
-                    continue
-
-                base = f"https://{store.store_url}" if "://" not in store.store_url else store.store_url
-                own_host = urlsplit(base).hostname
-                if not own_host:
-                    summary["errors"] += 1
-                    logger.warning("Skipped store %s: store URL has no valid hostname.", store.id)
-                    continue
-
-                body, ctype = fetch_page(base.rstrip("/") + "/products.json?limit=50")
-                if "json" not in ctype:
-                    continue
-                products = json.loads(body).get("products", [])
-                originals = [
-                    p["images"][0]["src"] for p in products if p.get("images") and p["images"][0].get("src")
-                ][:MAX_IMAGES_PER_STORE]
-
-                for original in originals:
-                    summary["images"] += 1
-                    try:
-                        original_hash = compute_image_hash(original)
-                        matches = search_web_for_matches(original)
-                    except (ValueError, RuntimeError, OSError, requests.RequestException):
-                        summary["errors"] += 1
-                        logger.warning("Skipped image for store %s", store.id, exc_info=True)
-                        continue
-                    for match in matches:
-                        host = urlsplit(match["url"]).hostname
-                        if not host or not own_host or host == own_host or host.endswith("." + own_host):
-                            continue
-                        try:
-                            similarity = compare_hashes(original_hash, compute_image_hash(match["url"]))
-                            if similarity < MATCH_THRESHOLD:
-                                continue
-                            exists = db.query(notice_model).filter_by(
-                                store_id=store.id, target_infringing_url=match["url"], original_asset_url=original
-                            ).first()
-                            if exists:
-                                continue
-                            contact = find_contact(host)
-                            if not contact:
-                                continue
-                            draft = draft_notice(
-                                host_abuse_email=contact,
-                                target_infringing_url=match["url"],
-                                original_asset_url=original,
-                                store_domain=store.store_url,
-                                recipient_source="whois",
-                            )
-                            db.add(notice_model(
-                                store_id=store.id,
-                                similarity_score=similarity,
-                                target_infringing_url=match["url"],
-                                original_asset_url=original,
-                                recipient=draft["recipient"],
-                                sender=draft["sender"],
-                                subject=draft["subject"],
-                                body_html=draft["html"],
-                                status="PENDING",
-                            ))
-                            summary["notices"] += 1
-                        except Exception:
-                            summary["errors"] += 1
-                            logger.warning("Skipped match for store %s", store.id, exc_info=True)
-                store.scans_performed = (store.scans_performed or 0) + 1
-                db.commit()
-            except Exception:
-                db.rollback()
-                summary["errors"] += 1
-                logger.exception("Scan failed for store %s", store.id)
-    finally:
-        db.close()
-    return summary
 
 
 def compare_hashes(hash1_str: str, hash2_str: str) -> float:
