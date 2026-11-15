@@ -1,8 +1,8 @@
 """Gumroad purchase handling.
 
 Sets app_metadata.subscription_status in Supabase, which src/trial-status.js reads.
-Only this server code writes that field. Every sale is confirmed with Gumroad's API before
-access is granted, because webhook payloads alone can be forged or replayed.
+Only this server code writes that field. Access is granted only for a product code in
+PRODUCT_MAP, and only after Gumroad confirms the sale for that same code.
 
 Env (Vercel and local, never commit values):
   GUMROAD_WEBHOOK_SECRET   random string, 32+ characters, used in the webhook URL
@@ -22,11 +22,24 @@ logger = logging.getLogger("alphaguard.billing")
 GUMROAD_API = "https://api.gumroad.com/v2"
 TIMEOUT = (3, 10)
 
-# Permalinks of the Gumroad products sold on the site (from src/site-config.js).
-KNOWN_PERMALINKS = frozenset({
-    "dbexqj", "lkqkkc", "cygzyw", "hmpejz", "oibele", "hygggq", "wbvjft",
-    "irlzfz", "gsvzuq", "fudbbv", "jroqz", "vlnxs", "izzea", "jrwsha",
-})
+# Each Gumroad code, mapped to the site product it sells. Only codes listed here can grant access.
+# Keep this in step with src/site-config.js. Add a code only after checking its Gumroad title and price.
+PRODUCT_MAP = {
+    "dbexqj": "ecom-small-b2c",
+    "lkqkkc": "ecom-mid-brands",
+    "cygzyw": "fashion-boutique",
+    "hmpejz": "tech-accessories",
+    "oibele": "health-wellness",
+    "hygggq": "global-enterprise",
+    "wbvjft": "influencer-merch",
+    "irlzfz": "media-producers",
+    "gsvzuq": "digital-photographers",
+    "fudbbv": "saas-templates",
+    "jroqz": "book-authors",
+    "izzea": "real-estate",
+    "jrwsha": "web3-nft",
+    "vlnxs": "executive-impersonation",
+}
 REVOKE_EVENTS = frozenset({"refund", "cancellation", "subscription_ended", "subscription_cancelled"})
 
 
@@ -100,14 +113,15 @@ def _find_user(email: str) -> dict | None:
     return None
 
 
-def set_subscription_status(email: str, status: str) -> bool:
-    """Write subscription_status without dropping other app_metadata such as role."""
+def set_subscription_status(email: str, status: str, product_id: str) -> bool:
+    """Write subscription_status and the product it covers, without dropping other app_metadata."""
     user = _find_user(email)
     if user is None:
         return False
     url, key = _supabase_config()
     metadata = dict(user.get("app_metadata") or {})
     metadata["subscription_status"] = status
+    metadata["subscription_product"] = product_id if status == "active" else None
     response = requests.put(
         f"{url}/auth/v1/admin/users/{user['id']}",
         headers={"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"},
@@ -121,9 +135,10 @@ def set_subscription_status(email: str, status: str) -> bool:
 
 def process_ping(form: dict) -> dict:
     """Handle one Gumroad ping. Returns {'outcome': ...}; raises BillingError to request a retry."""
-    permalink = str(form.get("product_permalink") or form.get("permalink") or "").strip()
-    if permalink not in KNOWN_PERMALINKS:
-        logger.info("Ignored ping for unknown product %r", permalink)
+    code = str(form.get("product_permalink") or form.get("permalink") or "").strip()
+    product_id = PRODUCT_MAP.get(code)
+    if product_id is None:
+        logger.info("Ignored ping for a code that is not mapped to a product")
         return {"outcome": "ignored_unknown_product"}
 
     event = str(form.get("resource_name") or "sale").strip().lower()
@@ -138,20 +153,19 @@ def process_ping(form: dict) -> dict:
     if not email or not sale_id:
         raise BillingError("Ping is missing the buyer email or sale id.")
 
-    # Confirm the sale with Gumroad before changing anything.
+    # Confirm the sale with Gumroad before changing anything. The sale must be for this same code.
     sale = fetch_sale(sale_id)
-    sale_email = str(sale.get("email") or "").strip().lower()
-    if sale_email != email:
+    if str(sale.get("email") or "").strip().lower() != email:
         raise BillingError("Sale email does not match the ping.")
-    if str(sale.get("product_permalink") or "") not in ("", permalink):
+    if str(sale.get("product_permalink") or "").strip() != code:
         raise BillingError("Sale product does not match the ping.")
 
     if status == "active" and sale.get("refunded"):
         status = "inactive"
 
-    updated = set_subscription_status(email, status)
+    updated = set_subscription_status(email, status, product_id)
     if not updated:
         # Account not created yet. Gumroad retries on error, so return success and log it.
-        logger.warning("Purchase for %s has no matching account yet", email)
+        logger.warning("Purchase has no matching account yet")
         return {"outcome": "no_account_yet"}
     return {"outcome": f"set_{status}"}
