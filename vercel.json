@@ -1,9 +1,6 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "functions": {
-    "api/index.py": { "maxDuration": 60 }
-  },
   "crons": [
     { "path": "/api/v1/cron/scan", "schedule": "0 6 * * *" }
   ],
