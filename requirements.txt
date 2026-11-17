@@ -1,8 +1,11 @@
-Set-Content -Path "requirements.txt" -Value 'opencv-python-headless
+$content = @"
+opencv-python-headless
 numpy
 pillow
 imagehash
 supabase
 requests
 pydantic
-pandas'
+pandas
+"@
+[System.IO.File]::WriteAllText("$PWD\requirements.txt", $content, (New-Object System.Text.UTF8Encoding $false))
