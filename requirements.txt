@@ -1,7 +1,8 @@
-opencv-python-headless
+Set-Content -Path "requirements.txt" -Value 'opencv-python-headless
 numpy
 pillow
 imagehash
 supabase
 requests
 pydantic
+pandas'
