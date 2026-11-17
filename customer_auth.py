@@ -139,3 +139,5 @@ def is_admin_user(user: dict | None) -> bool:
         return False
     role = (user.get("app_metadata") or {}).get("role")
     return role in ADMIN_ROLES
+CUSTOMER_TOKEN_EXPIRE_MINUTES = 30 
+PASSWORD_RESET_EXPIRE_MINUTES = 15

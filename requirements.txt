@@ -6,3 +6,6 @@ supabase
 requests
 pydantic
 pandas
+streamlit
+sqlalchemy
+python-jose
