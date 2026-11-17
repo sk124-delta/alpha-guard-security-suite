@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>AlphaGuard Security Suite | Digital Asset Defense</title>
+  <meta name="description" content="Find copycat stores that reuse your product images, then prepare takedown drafts for your review.">
+  <link rel="stylesheet" href="src/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="src/theme-init.js"></script>
+  <script src="src/site-config.js"></script>
+  <script src="src/trial-status.js"></script>
+  <script src="src/app.js" type="module"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <span class="brand-name">ALPHA<span class="accent">GUARD</span></span>
+        <span class="brand-sub">Security Suite</span>
+      </div>
+      <nav class="site-nav" aria-label="Main">
+        <button type="button" class="nav-btn" data-view="explorer" aria-current="page">Explorer</button>
+        <button type="button" class="nav-btn" data-view="wizard">Free trial</button>
+        <button type="button" class="nav-btn" data-view="dashboard">Dashboard</button>
+      </nav>
+      <div class="header-actions">
+        <button type="button" id="theme-toggle" class="btn btn-ghost" aria-pressed="false">Dark mode</button>
+        <span id="user-label" class="user-label" hidden></span>
+        <button type="button" id="sign-in-btn" class="btn btn-ghost">Sign in</button>
+        <button type="button" id="sign-out-btn" class="btn btn-ghost" hidden>Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="case-strip">
+    <div class="wrap case-inner">
+      <span>FILE: ALPHAGUARD</span>
+      <span>STATUS: <span id="case-status">NOT SIGNED IN</span></span>
+    </div>
+  </div>
+
+  <main id="main" class="wrap">
+
+    <!-- ============ EXPLORER (public) ============ -->
+    <section id="view-explorer" class="view">
+      <div class="hero">
+        <p class="eyebrow">Automated enforcement &middot; case file</p>
+        <h1>Stop losing sales to stores using your product photos</h1>
+        <p class="lead">Scan for copycat stores that reuse your product images, review each match, then prepare a takedown draft for your approval.</p>
+        <div class="cta-row">
+          <button type="button" class="btn btn-primary" data-action="start-trial">Start free trial</button>
+          <a class="btn btn-secondary" href="#explorer-section">Explore sectors</a>
+        </div>
+      </div>
+
+      <figure class="evidence-card" aria-labelledby="sample-label">
+        <figcaption id="sample-label">SAMPLE DATA &mdash; illustrative example, not a real store</figcaption>
+        <div class="thumbs">
+          <div class="thumb" aria-hidden="true"><span>ORIGINAL</span></div>
+          <div class="thumb" aria-hidden="true"><span>COPY</span></div>
+        </div>
+        <dl class="ledger">
+          <div><dt>Similarity</dt><dd>98%</dd></div>
+          <div><dt>Case #</dt><dd>SAMPLE-0001</dd></div>
+          <div><dt>Hash</dt><dd>phash: 9f3a&hellip;c21e</dd></div>
+        </dl>
+      </figure>
+
+      <section id="explorer-section" class="section" aria-labelledby="explorer-title">
+        <h2 id="explorer-title">Industry explorer</h2>
+        <p class="muted">Choose a sector to see the categories it covers. All four sectors are shown equally.</p>
+        <div id="sector-grid" class="sector-grid" role="group" aria-label="Industry sectors"></div>
+        <div id="sector-panel" class="sector-panel" aria-live="polite">
+          <p class="muted">Select a sector to see its categories.</p>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="how-title">
+        <h2 id="how-title">How it works</h2>
+        <ol class="how-list">
+          <li><h3>1. Scan</h3><p class="muted">Your catalog images are checked against reverse image search once a day.</p></li>
+          <li><h3>2. Detect</h3><p class="muted">Perceptual hashes compare images and flag likely matches for review.</p></li>
+          <li><h3>3. Verify</h3><p class="muted">Each match is recorded with its URLs and similarity score.</p></li>
+          <li><h3>4. Takedown</h3>
+            <p class="muted">Day 1: DMCA draft, sent only after approval. Day 3 and Day 7 stages are planned, not yet automated.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="section" aria-labelledby="trust-title">
+        <h2 id="trust-title">What we do and do not do</h2>
+        <ul class="trust-list">
+          <li>Matches are flagged for human review. Nothing is sent without an explicit confirmation from a signed-in admin.</li>
+          <li>Scans run on a daily schedule. They are not continuous.</li>
+          <li>Similarity is not a legal determination. Review all evidence before sending any notice.</li>
+        </ul>
+      </section>
+
+      <section class="section" aria-labelledby="sample-title">
+        <h2 id="sample-title">What your dashboard tracks</h2>
+        <p class="muted"><strong>Sample data</strong> &mdash; illustrative figures as of <span id="sample-as-of">2026-11-07</span>. These are not live metrics.</p>
+        <div class="stat-grid">
+          <div class="stat"><strong id="sample-scans">14,820</strong><span>Scans performed (sample)</span></div>
+          <div class="stat"><strong id="sample-threats">28</strong><span>Threats identified (sample)</span></div>
+          <div class="stat"><strong id="sample-notices">25</strong><span>Notices dispatched (sample)</span></div>
+        </div>
+        <p id="sample-summary" class="muted">Sample data: 25 of 28 example threats have a notice dispatched (89.3%).</p>
+      </section>
+    </section>
+
+    <!-- ============ FREE TRIAL WIZARD ============ -->
+    <section id="view-wizard" class="view" hidden>
+      <h2>Free trial setup</h2>
+      <p class="muted">Three short steps. We only read your store's public pages.</p>
+
+      <ol class="steps">
+        <li data-step="1" aria-current="step">1. Sector</li>
+        <li data-step="2">2. Store URL</li>
+        <li data-step="3">3. Result</li>
+      </ol>
+
+      <form id="wizard-form" class="card" novalidate>
+        <fieldset id="step-1" class="wizard-step">
+          <legend>Choose your sector and niche</legend>
+          <label for="ob-sector">Sector</label>
+          <select id="ob-sector"></select>
+          <label for="ob-niche">Niche</label>
+          <select id="ob-niche"></select>
+          <p id="step1-status" class="status" role="status"></p>
+          <div class="step-actions">
+            <span></span>
+            <button type="button" class="btn btn-primary" data-step-next="2">Next</button>
+          </div>
+        </fieldset>
+
+        <fieldset id="step-2" class="wizard-step" hidden>
+          <legend>Your store website</legend>
+          <label for="ob-url">Store URL</label>
+          <input id="ob-url" type="url" placeholder="https://yourstore.com" autocomplete="url" aria-describedby="ob-url-error">
+          <p id="ob-url-error" class="field-error" hidden></p>
+          <p id="scan-status" class="status" role="status" aria-live="polite"></p>
+          <div class="step-actions">
+            <button type="button" class="btn btn-ghost" data-step-prev="1">Back</button>
+            <button type="button" id="run-scan" class="btn btn-primary">Check my store</button>
+          </div>
+        </fieldset>
+
+        <fieldset id="step-3" class="wizard-step" hidden>
+          <legend>Your recommendation</legend>
+          <div id="scan-result"></div>
+          <div class="step-actions">
+            <button type="button" class="btn btn-ghost" data-step-prev="2">Back</button>
+            <button type="button" class="btn btn-primary" data-action="start-trial">Start free trial</button>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+
+    <!-- ============ DASHBOARD (signed in) ============ -->
+    <section id="view-dashboard" class="view" hidden>
+      <div class="card dash-head">
+        <div>
+          <p class="eyebrow">Store dashboard</p>
+          <h2 id="dash-store">Your store</h2>
+        </div>
+        <dl class="dash-meta">
+          <div><dt>Plan</dt><dd id="dash-plan">No plan</dd></div>
+          <div><dt>Trial</dt><dd id="dash-trial">No active subscription</dd></div>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h3>Scan results</h3>
+        <p class="muted">No scan results yet. Results appear here after your first catalog scan. Scans run once a day.</p>
+      </div>
+
+      <div class="card">
+        <h3>Subscription</h3>
+        <p id="plan-detail" class="muted">Sign in to see your plan.</p>
+        <p class="muted">Plans and checkout links are in the <a href="#explorer-section">explorer</a>.</p>
+      </div>
+
+      <section id="admin-panel" class="card" aria-labelledby="admin-title" hidden>
+        <h3 id="admin-title">Admin: notice review</h3>
+        <p class="warn">Similarity is not a legal determination. Review all evidence before sending.</p>
+
+        <button type="button" id="load-notices" class="btn btn-secondary">Load notices</button>
+        <p id="notice-status" class="status" role="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Notice and target</th><th>Recipient</th><th>Similarity</th><th>Status</th></tr></thead>
+            <tbody id="notice-rows"></tbody>
+          </table>
+        </div>
+
+        <h3 class="draft-title">Prepare a draft</h3>
+        <form id="draft-form" novalidate>
+          <div class="form-grid two">
+            <label>Store ID<input id="d-store-id" type="number" min="1" required></label>
+            <label>Abuse desk email<input id="d-abuse" type="email" required></label>
+            <label>Infringing page URL<input id="d-target" type="url" required></label>
+            <label>Infringing image URL<input id="d-infr-img" type="url" required></label>
+            <label>Original image URL<input id="d-orig-img" type="url" required></label>
+          </div>
+          <label class="check">
+            <input id="d-confirm" type="checkbox">
+            I have verified the evidence and I am authorized to prepare this notice.
+          </label>
+          <div class="step-actions">
+            <span></span>
+            <button type="submit" class="btn btn-primary">Prepare draft</button>
+          </div>
+          <p id="draft-status" class="status" role="status" aria-live="polite"></p>
+          <pre id="draft-output" hidden></pre>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <!-- ============ SIGN IN / SIGN UP / RESET ============ -->
+  <dialog id="auth-dialog" aria-labelledby="auth-title">
+    <div class="dialog-head">
+      <h2 id="auth-title">Sign in</h2>
+      <button type="button" class="btn btn-ghost" data-action="close-auth">Close</button>
+    </div>
+
+    <div id="auth-tabs" class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-login" aria-selected="true" data-auth-view="login">Sign in</button>
+      <button type="button" role="tab" id="tab-signup" aria-selected="false" data-auth-view="signup">Create account</button>
+    </div>
+
+    <form id="form-login" class="form-grid" novalidate>
+      <label>Email<input id="l-email" type="email" autocomplete="username" required></label>
+      <label>Password<input id="l-password" type="password" autocomplete="current-password" required></label>
+      <button type="submit" class="btn btn-primary">Sign in</button>
+      <button type="button" class="link" data-auth-view="forgot">Forgot password?</button>
+    </form>
+
+    <form id="form-signup" class="form-grid" novalidate hidden>
+      <label>Your name<input id="s-name" type="text" autocomplete="name" required></label>
+      <p id="s-name-error" class="field-error" hidden></p>
+      <label>Work email<input id="s-email" type="email" autocomplete="email" required></label>
+      <p id="s-email-error" class="field-error" hidden></p>
+      <label>Store URL<input id="s-url" type="url" placeholder="https://acmestore.com" required></label>
+      <p id="s-url-error" class="field-error" hidden></p>
+      <label>Password (8 characters minimum)<input id="s-password" type="password" autocomplete="new-password" minlength="8" required></label>
+      <p id="s-password-error" class="field-error" hidden></p>
+      <label>Confirm password<input id="s-confirm" type="password" autocomplete="new-password" minlength="8" required></label>
+      <p id="s-confirm-error" class="field-error" hidden></p>
+      <button type="submit" class="btn btn-primary">Create account</button>
+    </form>
+
+    <form id="form-forgot" class="form-grid" novalidate hidden>
+      <label>Email<input id="f-email" type="email" autocomplete="username" required></label>
+      <button type="submit" class="btn btn-primary">Send reset link</button>
+      <button type="button" class="link" data-auth-view="login">Back to sign in</button>
+    </form>
+
+    <p id="auth-status" class="status" role="status" aria-live="polite"></p>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>AlphaGuard Security Suite &middot; Digital asset defense</span>
+      <span>Daily scans &middot; Day 1 DMCA draft &middot; Days 3 and 7 planned</span>
+      <span>&copy; 2026 AlphaGuard Security Suite</span>
+      <!-- TODO(legal): The Privacy Policy is hosted on a third-party generator (TermsFeed). Counsel must confirm it names AlphaGuard Security Suite and covers the data collected before launch. -->
+      <a href="https://www.termsfeed.com/live/97c6e08b-c6fa-49d8-b508-abd9f222c717" target="_blank" rel="noopener noreferrer">Privacy policy</a>
+    </div>
+  </footer>
+</body>
+</html>

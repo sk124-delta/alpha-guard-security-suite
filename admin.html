@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>AlphaGuard Admin</title>
+  <link rel="stylesheet" href="src/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="src/theme-init.js"></script>
+  <script src="src/site-config.js"></script>
+  <script src="src/admin.js" type="module"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <span class="brand-name">ALPHA<span class="accent">GUARD</span></span>
+        <span class="brand-sub">Admin</span>
+      </div>
+      <div class="header-actions">
+        <span id="admin-user" class="user-label"></span>
+        <a class="btn btn-ghost" href="index.html">Public site</a>
+        <button type="button" id="sign-out" class="btn btn-ghost">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="case-strip">
+    <div class="wrap case-inner">
+      <span>INTERNAL: ADMIN ONLY</span>
+      <span id="admin-clock"></span>
+    </div>
+  </div>
+
+  <main class="wrap view">
+
+    <!-- Shown while access is being checked, and when access is denied -->
+    <section id="gate" class="card">
+      <h2 id="gate-title">Checking access…</h2>
+      <p id="gate-text" class="muted"></p>
+      <p id="gate-link" hidden><a href="index.html">Go to the public site</a></p>
+    </section>
+
+    <div id="admin-app" hidden>
+      <div class="tabs" role="tablist" aria-label="Admin sections">
+        <button type="button" role="tab" data-tab="support" aria-selected="true">Support tickets</button>
+        <button type="button" role="tab" data-tab="notices" aria-selected="false">Notice queue</button>
+        <button type="button" role="tab" data-tab="auth" aria-selected="false">Authorizations</button>
+        <button type="button" role="tab" data-tab="audit" aria-selected="false">Audit log</button>
+      </div>
+
+      <!-- Support tickets -->
+      <section id="tab-support" class="card">
+        <div class="section-head">
+          <h2>Support tickets</h2>
+          <div>
+            <label class="inline">Filter
+              <select id="ticket-filter">
+                <option value="all">All</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="ai">Escalated from AI</option>
+              </select>
+            </label>
+            <button type="button" class="btn btn-secondary" data-refresh="support">Refresh</button>
+          </div>
+        </div>
+        <p id="support-status" class="status" role="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Received</th><th>Store</th><th>Subject</th><th>Message</th><th>Status</th><th>Source</th></tr></thead>
+            <tbody id="support-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Notice queue -->
+      <section id="tab-notices" class="card" hidden>
+        <div class="section-head">
+          <h2>Notice queue</h2>
+          <button type="button" class="btn btn-secondary" data-refresh="notices">Refresh</button>
+        </div>
+        <p class="warn">Similarity is not a legal determination. Review all evidence before deciding.</p>
+        <p class="muted">Approving records your decision. Sending the notice is a separate step and is not connected yet, so approved notices stay in the approved state.</p>
+        <p id="notice-status" class="status" role="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Received</th><th>Copy found at</th><th>Original</th><th>Score</th><th>Status</th><th>Decision</th></tr></thead>
+            <tbody id="notice-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Authorizations -->
+      <section id="tab-auth" class="card" hidden>
+        <h2>Authorizations</h2>
+        <p class="muted">Each customer's consent answers and the terms version they accepted. This view needs a consent table, which is not created yet. Until then it shows nothing.</p>
+        <p id="auth-status" class="status" role="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Owns images</th><th>Authorizes notices</th><th>Terms version</th><th>Accepted at</th></tr></thead>
+            <tbody id="auth-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Audit log -->
+      <section id="tab-audit" class="card" hidden>
+        <div class="section-head">
+          <h2>Audit log</h2>
+          <button type="button" class="btn btn-secondary" data-refresh="audit">Refresh</button>
+        </div>
+        <p class="muted">Every decision and status change made from this page. Entries cannot be edited here.</p>
+        <p id="audit-status" class="status" role="status" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Who</th><th>Action</th><th>Item</th></tr></thead>
+            <tbody id="audit-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>AlphaGuard internal admin</span>
+      <span>Access is checked on the server for every action.</span>
+    </div>
+  </footer>
+</body>
+</html>
