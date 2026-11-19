@@ -1,11 +1,22 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
   <title>AlphaGuard Security Suite | Digital Asset Defense</title>
+
+  <!-- AlphaGuard Browser Icon -->
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="shortcut icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+
+  <meta name="theme-color" content="#0D171D">
   <meta name="description" content="Find copycat stores that reuse your product images, then prepare takedown drafts for your review.">
+
   <link rel="stylesheet" href="src/styles.css">
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <script src="src/theme-init.js"></script>
   <script src="src/site-config.js"></script>
@@ -13,6 +24,7 @@
   <script src="src/app.js" type="module"></script>
 </head>
 <body>
+
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header">
@@ -108,6 +120,17 @@
           <div class="stat"><strong id="sample-notices">25</strong><span>Notices dispatched (sample)</span></div>
         </div>
         <p id="sample-summary" class="muted">Sample data: 25 of 28 example threats have a notice dispatched (89.3%).</p>
+      </section>
+
+      <!-- ABOUT ALPHAGUARD -->
+      <section class="section" aria-labelledby="about-title">
+        <h2 id="about-title">Who's Behind AlphaGuard?</h2>
+        <p>AlphaGuard Security Suite was founded by Sania Iqbal, an independent founder based in Karachi, Pakistan.</p>
+        <p>The project focuses on e-commerce brand protection, digital asset monitoring, and identifying unauthorised use of product imagery.</p>
+        <p><strong>Founder:</strong> Sania Iqbal</p>
+        <p><strong>Connect with the founder:</strong>
+          <a href="https://www.linkedin.com/in/sania-iqbal-b574352b1" target="_blank" rel="noopener noreferrer">LinkedIn profile</a>
+        </p>
       </section>
     </section>
 
@@ -262,13 +285,18 @@
     <p id="auth-status" class="status" role="status" aria-live="polite"></p>
   </dialog>
 
+  <!-- ============ UPDATED FOOTER ============ -->
   <footer class="site-footer">
     <div class="wrap footer-inner">
-      <span>AlphaGuard Security Suite &middot; Digital asset defense</span>
-      <span>Daily scans &middot; Day 1 DMCA draft &middot; Days 3 and 7 planned</span>
-      <span>&copy; 2026 AlphaGuard Security Suite</span>
-      <!-- TODO(legal): The Privacy Policy is hosted on a third-party generator (TermsFeed). Counsel must confirm it names AlphaGuard Security Suite and covers the data collected before launch. -->
-      <a href="https://www.termsfeed.com/live/97c6e08b-c6fa-49d8-b508-abd9f222c717" target="_blank" rel="noopener noreferrer">Privacy policy</a>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="refund.html">Refunds</a>
+      </nav>
+      <span>&copy; 2026 AlphaGuard Security Suite. All rights reserved.</span>
+      <span>AlphaGuard Security Suite &middot; Digital asset defense &middot; Karachi, Pakistan</span>
     </div>
   </footer>
 </body>
