@@ -254,4 +254,34 @@
       <p id="s-email-error" class="field-error" hidden></p>
       <label>Store URL<input id="s-url" type="url" placeholder="https://acmestore.com" required></label>
       <p id="s-url-error" class="field-error" hidden></p>
-      <label>Password (8 characters minimum)<input id="s-password"
+      <label>Password (8 characters minimum)<input id="s-password" type="password" autocomplete="new-password" minlength="8" required></label>
+      <p id="s-password-error" class="field-error" hidden></p>
+      <label>Confirm password<input id="s-confirm" type="password" autocomplete="new-password" minlength="8" required></label>
+      <p id="s-confirm-error" class="field-error" hidden></p>
+      <button type="submit" class="btn btn-primary">Create account</button>
+    </form>
+
+    <form id="form-forgot" class="form-grid" novalidate hidden>
+      <label>Email<input id="f-email" type="email" autocomplete="username" required></label>
+      <button type="submit" class="btn btn-primary">Send reset link</button>
+      <button type="button" class="link" data-auth-view="login">Back to sign in</button>
+    </form>
+
+    <p id="auth-status" class="status" role="status" aria-live="polite"></p>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <nav class="footer-links" aria-label="Footer">
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="refund.html">Refunds</a>
+      </nav>
+      <span>&copy; 2026 AlphaGuard Security Suite. All rights reserved.</span>
+      <span>AlphaGuard Security Suite &middot; Digital asset defense</span>
+    </div>
+  </footer>
+</body>
+</html>
